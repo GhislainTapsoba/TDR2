@@ -10,7 +10,7 @@ export async function OPTIONS(request: NextRequest) {
 // PUT /api/comments/[id] - Update a comment
 export async function PUT(
     request: NextRequest,
-    context: { params: { id: string } }
+    { params }: { params: { id: string } }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -18,7 +18,7 @@ export async function PUT(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = context.params;
+        const { id } = params;
         const body = await request.json();
         const { content } = body;
 
