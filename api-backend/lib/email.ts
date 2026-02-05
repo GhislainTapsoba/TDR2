@@ -197,6 +197,73 @@ export async function sendTaskReminder(
   }
 }
 
+export async function sendTaskUpdateEmail(options: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName: string;
+  updatedBy: string;
+  changes: string;
+}): Promise<void> {
+  try {
+    const subject = `Mise à jour de la tâche: ${options.taskTitle}`;
+    const message = `La tâche "${options.taskTitle}" a été mise à jour.`;
+
+    await sendEmail({
+      to: options.to,
+      subject: subject,
+      html: `
+        <h2>Mise à jour de la tâche</h2>
+        <p>Bonjour ${options.recipientName},</p>
+        <p>${options.changes} par ${options.updatedBy}.</p>
+        <h3>${options.taskTitle}</h3>
+        <p>Projet: ${options.projectName}</p>
+        <p>ID de la tâche: ${options.taskId}</p>
+      `,
+      text: message,
+    });
+  } catch (error) {
+    console.error('Error sending task update email:', error);
+    throw error;
+  }
+}
+
+export async function sendTaskAssignmentEmail(options: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName: string;
+  assignedBy: string;
+  confirmationToken: string;
+}): Promise<void> {
+  try {
+    const subject = `Nouvelle tâche assignée: ${options.taskTitle}`;
+    const message = `Une nouvelle tâche, "${options.taskTitle}", vous a été assignée par ${options.assignedBy}.`;
+
+    await sendEmail({
+      to: options.to,
+      subject: subject,
+      html: `
+        <h2>Nouvelle tâche assignée</h2>
+        <p>Bonjour ${options.recipientName},</p>
+        <p>${message}</p>
+        <h3>${options.taskTitle}</h3>
+        <p>Projet: ${options.projectName}</p>
+        <p>ID de la tâche: ${options.taskId}</p>
+        <p>Token de confirmation: ${options.confirmationToken}</p>
+      `,
+      text: message,
+    });
+  } catch (error) {
+    console.error('Error sending task assignment email:', error);
+    throw error;
+  }
+}
+
 export async function createConfirmationToken(params: {
   type: string;
   userId: string;
