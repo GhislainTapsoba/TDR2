@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { AssignTask } from "@/core/use-cases/AssignTask"
-import { SupabaseTaskRepository } from "@/infrastructure/db/task.repository"
+import { SupabaseTaskRepository } from "@/infrastructure/db/repositories/tasks.repository"
 
 export async function POST(req: Request) {
   const { taskId, userId } = await req.json()
