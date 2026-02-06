@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest) {
 
         // Check if preferences exist
         const { rows: existingRows } = await db.query(
-            'SELECT id FROM notification_preferences WHERE user_id = $1',
+            'SELECT user_id FROM notification_preferences WHERE user_id = $1',
             [user.id]
         );
 

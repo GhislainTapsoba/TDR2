@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const project_id = searchParams.get('project_id');
 
+        // Handle "new" project case - return empty tasks list
+        if (project_id === 'new') {
+            return corsResponse([], request);
+        }
+
         let query = `
       SELECT t.*, p.title as project_title, s.name as stage_name, c.name as created_by_name,
              (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email))

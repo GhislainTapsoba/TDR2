@@ -14,12 +14,31 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
+        
+        // Handle "new" project case
+        if (id === 'new') {
+            return corsResponse({
+                id: 'new',
+                title: '',
+                description: '',
+                start_date: null,
+                end_date: null,
+                due_date: null,
+                status: 'PLANNING',
+                created_by_id: null,
+                manager_id: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                stages: [],
+                tasks: []
+            }, request);
+        }
+
         const user = await verifyAuth(request);
         if (!user) {
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
-
-        const { id } = await params;
 
         const { rows } = await db.query(
             `SELECT p.*, m.name as manager_name, m.email as manager_email, c.name as created_by_name

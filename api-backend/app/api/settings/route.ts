@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest) {
 
         // Check if settings exist
         const { rows: existingRows } = await db.query(
-            'SELECT id FROM user_settings WHERE user_id = $1',
+            'SELECT user_id FROM user_settings WHERE user_id = $1',
             [user.id]
         );
 
