@@ -1,4 +1,4 @@
-# TDR2 - Plateforme de Gestion de Projets
+# TeamProject - Plateforme de Gestion de Projets
 
 Application complète de gestion et suivi de projets avec architecture CRUD, construite avec Next.js, PostgreSQL, et système de notifications par email.
 
@@ -49,7 +49,7 @@ JWT_SECRET=votre-cle-secrete-jwt-tres-longue-et-securisee
 MAILJET_API_KEY=votre-cle-api-mailjet
 MAILJET_SECRET_KEY=votre-cle-secrete-mailjet
 MAIL_FROM_EMAIL=noreply@votredomaine.com
-MAIL_FROM_NAME=TDR2 Platform
+MAIL_FROM_NAME=TeamProject Platform
 
 # URLs
 PLATFORM_URL=http://localhost:3001
@@ -222,4 +222,4 @@ Ce projet est développé pour un usage interne.
 
 ## 👥 Auteurs
 
-Développé par l'équipe TDR2
+Développé par l'équipe TeamProject

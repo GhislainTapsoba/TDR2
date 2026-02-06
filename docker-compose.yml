@@ -68,13 +68,13 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-deep-user}:${POSTGRES_PASSWORD:-deep-projet}@postgres:5432/${POSTGRES_DB:-deep-db}
       JWT_SECRET: ${JWT_SECRET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: https://tdr2.deep-technologies.com
-      NEXT_PUBLIC_API_URL: https://tdr2.deep-technologies.com
-      NEXT_PUBLIC_FRONTEND_URL: https://tdr2.deep-technologies.com
+      NEXTAUTH_URL: https://teamproject.deep-technologies.com
+      NEXT_PUBLIC_API_URL: https://teamproject.deep-technologies.com
+      NEXT_PUBLIC_FRONTEND_URL: https://teamproject.deep-technologies.com
       MAILJET_API_KEY: ${MAILJET_API_KEY}
       MAILJET_SECRET_KEY: ${MAILJET_SECRET_KEY}
       MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-TDR2 Projects}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-TeamProject Projects}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
@@ -109,9 +109,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      NEXT_PUBLIC_API_URL: https://tdr2.deep-technologies.com/api
+      NEXT_PUBLIC_API_URL: https://teamproject.deep-technologies.com/api
       INTERNAL_API_URL: http://api-backend:3000/api
-      NEXTAUTH_URL: https://tdr2.deep-technologies.com
+      NEXTAUTH_URL: https://teamproject.deep-technologies.com
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     expose:
       - "3001"
