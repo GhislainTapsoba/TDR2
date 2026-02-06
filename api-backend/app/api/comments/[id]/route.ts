@@ -10,7 +10,7 @@ export async function OPTIONS(request: NextRequest) {
 // PUT /api/comments/[id] - Update a comment
 export async function PUT(
     request: NextRequest,
-    params: { id: string }
+    { params }: { params: { id: string } }
 ) {
     try {
         const user = await verifyAuth(request);
