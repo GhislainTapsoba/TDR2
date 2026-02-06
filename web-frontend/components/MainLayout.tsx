@@ -2,14 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from './Sidebar';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  // Pages where sidebar should not be shown
+  const noSidebarPages = ['/login', '/register'];
+  const showSidebar = !noSidebarPages.includes(pathname);
 
   // Error boundary
   if (hasError) {
@@ -29,28 +35,30 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Redirect if not authenticated
-  if (!isLoading && !user) {
+  // Redirect if not authenticated (except for login/register pages)
+  if (!isLoading && !user && !noSidebarPages.includes(pathname)) {
     router.push('/login');
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
+      {/* Mobile menu button - only show if sidebar is enabled */}
+      {showSidebar && (
+        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
+      {/* Mobile sidebar overlay - only show if sidebar is enabled */}
+      {showSidebar && sidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
@@ -59,15 +67,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
       )}
 
-      {/* Sidebar - Desktop always visible, mobile toggle */}
-      <div className="fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
-        <div className={`lg:block ${sidebarOpen ? 'block' : 'hidden'}`}>
-          <Sidebar />
+      {/* Sidebar - Desktop always visible, mobile toggle - only show if enabled */}
+      {showSidebar && (
+        <div className="fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+          <div className={`lg:block ${sidebarOpen ? 'block' : 'hidden'}`}>
+            <Sidebar />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Main content */}
-      <div className="lg:pl-64">
+      {/* Main content - adjust padding based on sidebar visibility */}
+      <div className={showSidebar ? 'lg:pl-64' : ''}>
         {/* Page content */}
         <main className="p-6">
           <div onError={() => setHasError(true)}>
