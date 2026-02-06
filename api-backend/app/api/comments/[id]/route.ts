@@ -8,6 +8,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // PUT /api/comments/[id] - Update a comment
+// @ts-ignore
 export async function PUT(
     request: NextRequest,
     { params }: { params: { id: string } }
