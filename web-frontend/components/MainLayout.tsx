@@ -9,6 +9,25 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  // Error boundary
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Une erreur est survenue</h1>
+          <p className="text-gray-600 mb-6">Veuillez rafraîchir la page</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Rafraîchir
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
@@ -18,45 +37,42 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar - Always visible on desktop, toggle on mobile */}
-      <Sidebar />
-      
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Mobile menu button */}
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </div>
-        )}
-
-        {/* Mobile sidebar */}
-        <div
-          className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out lg:hidden ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+      {/* Mobile menu button */}
+      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
         >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+        </div>
+      )}
+
+      {/* Sidebar - Desktop always visible, mobile toggle */}
+      <div className="fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+        <div className={`lg:block ${sidebarOpen ? 'block' : 'hidden'}`}>
           <Sidebar />
         </div>
+      </div>
 
+      {/* Main content */}
+      <div className="lg:pl-64">
         {/* Page content */}
         <main className="p-6">
-          {children}
+          <div onError={() => setHasError(true)}>
+            {children}
+          </div>
         </main>
       </div>
     </div>

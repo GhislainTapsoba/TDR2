@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { profileAPI } from '@/lib/api';
+import BackButton from '@/components/BackButton';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -111,15 +112,7 @@ export default function ProfilePage() {
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header with back button */}
-                <button
-                    onClick={() => window.history.back()}
-                    className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
-                >
-                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Retour
-                </button>
+                <BackButton className="mb-6" />
                 
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Mon Profil</h1>
 
