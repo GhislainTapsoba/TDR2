@@ -1,10 +1,22 @@
 import Mailjet from 'node-mailjet';
 import { db } from './db';
 
-const mailjet = new Mailjet({
-  apiKey: process.env.MAILJET_API_KEY || '',
-  apiSecret: process.env.MAILJET_SECRET_KEY || '',
-});
+let mailjet: Mailjet | null = null;
+
+function getMailjet() {
+  if (!mailjet) {
+    const apiKey = process.env.MAILJET_API_KEY;
+    const apiSecret = process.env.MAILJET_SECRET_KEY;
+    if (!apiKey || !apiSecret) {
+      throw new Error('Mailjet API_KEY and SECRET_KEY are required');
+    }
+    mailjet = new Mailjet({
+      apiKey,
+      apiSecret,
+    });
+  }
+  return mailjet;
+}
 
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
@@ -30,7 +42,7 @@ interface WhatsAppOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
-    const request = mailjet.post('send', { version: 'v3.1' }).request({
+    const request = getMailjet().post('send', { version: 'v3.1' }).request({
       Messages: [
         {
           From: {
