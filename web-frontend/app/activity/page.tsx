@@ -82,13 +82,23 @@ export default function ActivityPage() {
 
     return (
         <div>
-            {/* Header */}
+            {/* Header with back button */}
             <div className="mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Journal d'activité</h1>
-                    <p className="text-gray-600 mt-2">Suivez toutes les activités du système</p>
+                <button
+                    onClick={() => window.history.back()}
+                    className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+                >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Retour
+                </button>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Journal d'activité</h1>
+                        <p className="text-gray-600 mt-1">Consultez toutes les activités récentes</p>
+                    </div>
                 </div>
-
                 {/* Filters */}
                 <div className="mt-6 flex space-x-4">
                     <select

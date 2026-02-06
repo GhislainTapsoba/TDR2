@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'TDR2 - Team Project',
-    short_name: 'TDR2',
+    name: 'Team Project',
+    short_name: 'Team Project',
     description: 'Plateforme de gestion et suivi de projets',
     start_url: '/',
     display: 'standalone',
@@ -12,14 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: '/logo.png',
-        sizes: '192x192',
-        type: 'image/png'
+        sizes: 'any',
+        type: 'image/png',
       },
-      {
-        src: '/logo.png',
-        sizes: '512x512',
-        type: 'image/png'
-      }
-    ]
-  }
+    ],
+  };
 }

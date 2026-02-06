@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { projectsAPI } from '@/lib/api';
+import { projectsAPI, usersAPI } from '@/lib/api';
 
 interface Project {
     id: string;
@@ -16,6 +16,14 @@ interface Project {
     created_by_name?: string;
     manager_name?: string;
     created_at: string;
+}
+
+interface User {
+    id: string;
+    name?: string;
+    email: string;
+    role: string;
+    is_active: boolean;
 }
 
 export default function ProjectsPage() {
@@ -31,13 +39,26 @@ export default function ProjectsPage() {
         start_date: '',
         end_date: '',
         due_date: '',
+        manager_id: '',
+        members: [] as string[],
     });
+    const [users, setUsers] = useState<User[]>([]);
 
     useEffect(() => {
         if (user) {
             loadProjects();
+            loadUsers();
         }
     }, [user, filter, searchTerm]);
+
+    const loadUsers = async () => {
+        try {
+            const response = await usersAPI.getAll();
+            setUsers(response.data);
+        } catch (error) {
+            console.error('Error loading users:', error);
+        }
+    };
 
     const loadProjects = async () => {
         try {
@@ -57,7 +78,22 @@ export default function ProjectsPage() {
     const handleCreateProject = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await projectsAPI.create(formData);
+            // Create project first
+            const projectResponse = await projectsAPI.create(formData);
+            const projectId = projectResponse.data.id;
+            
+            // Add members if any selected
+            if (formData.members.length > 0) {
+                await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/members`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    },
+                    body: JSON.stringify({ member_ids: formData.members }),
+                });
+            }
+            
             setShowCreateModal(false);
             setFormData({
                 title: '',
@@ -65,6 +101,8 @@ export default function ProjectsPage() {
                 start_date: '',
                 end_date: '',
                 due_date: '',
+                manager_id: '',
+                members: [],
             });
             loadProjects();
         } catch (error) {
@@ -87,6 +125,7 @@ export default function ProjectsPage() {
         switch (status) {
             case 'PLANNING': return 'bg-yellow-100 text-yellow-800';
             case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
+            case 'ON_HOLD': return 'bg-orange-100 text-orange-800';
             case 'COMPLETED': return 'bg-green-100 text-green-800';
             case 'CANCELLED': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
@@ -97,6 +136,7 @@ export default function ProjectsPage() {
         switch (status) {
             case 'PLANNING': return 'Planification';
             case 'IN_PROGRESS': return 'En cours';
+            case 'ON_HOLD': return 'En pause';
             case 'COMPLETED': return 'Terminé';
             case 'CANCELLED': return 'Annulé';
             default: return status;
@@ -118,8 +158,17 @@ export default function ProjectsPage() {
 
     return (
         <div>
-            {/* Header */}
+            {/* Header with back button */}
             <div className="mb-8">
+                <button
+                    onClick={() => window.history.back()}
+                    className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+                >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Retour
+                </button>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Projets</h1>
@@ -155,6 +204,7 @@ export default function ProjectsPage() {
                         <option value="">Tous les statuts</option>
                         <option value="PLANNING">Planification</option>
                         <option value="IN_PROGRESS">En cours</option>
+                        <option value="ON_HOLD">En pause</option>
                         <option value="COMPLETED">Terminé</option>
                         <option value="CANCELLED">Annulé</option>
                     </select>
@@ -277,14 +327,47 @@ export default function ProjectsPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Échéance
+                                            Manager du projet
                                         </label>
-                                        <input
-                                            type="date"
-                                            value={formData.due_date}
-                                            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                                        <select
+                                            value={formData.manager_id}
+                                            onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
+                                        >
+                                            <option value="">Sélectionner un manager</option>
+                                            {users.filter(u => u.role === 'manager' || u.role === 'admin').map((userItem) => (
+                                                <option key={userItem.id} value={userItem.id}>
+                                                    {userItem.name || userItem.email}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Membres de l'équipe
+                                        </label>
+                                        <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                                            {users.filter(u => u.role === 'employee').map((userItem) => (
+                                                <label key={userItem.id} className="flex items-center space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        value={userItem.id}
+                                                        checked={formData.members.includes(userItem.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setFormData({ ...formData, members: [...formData.members, userItem.id] });
+                                                            } else {
+                                                                setFormData({ ...formData, members: formData.members.filter(id => id !== userItem.id) });
+                                                            }
+                                                        }}
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm text-gray-700">
+                                                        {userItem.name || userItem.email}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-end space-x-3 mt-6">

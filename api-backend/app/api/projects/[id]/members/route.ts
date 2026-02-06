@@ -45,7 +45,7 @@ export async function GET(
     }
 }
 
-// POST /api/projects/[id]/members - Add member to project
+// POST /api/projects/[id]/members - Add multiple members to project
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -58,10 +58,10 @@ export async function POST(
 
         const paramsResolved = await params;
         const projectId = paramsResolved.id;
-        const { user_id, role = 'member' } = await request.json();
+        const { member_ids } = await request.json();
 
-        if (!user_id) {
-            return corsResponse({ error: 'user_id requis' }, request, { status: 400 });
+        if (!member_ids || !Array.isArray(member_ids) || member_ids.length === 0) {
+            return corsResponse({ error: 'IDs des membres requis' }, request, { status: 400 });
         }
 
         // Check if user is project manager or admin
@@ -81,27 +81,24 @@ export async function POST(
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 
-        // Check if member already exists
-        const existingMember = await db.query(
-            'SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2',
-            [projectId, user_id]
-        );
+        // Add multiple members
+        const values = member_ids.map((memberId: string, index: number) => 
+            `($1, $${index + 2}, 'member', NOW(), NOW())`
+        ).join(', ');
+        
+        const queryParams = [projectId, ...member_ids];
 
-        if (existingMember.rows.length > 0) {
-            return corsResponse({ error: 'Membre déjà ajouté' }, request, { status: 400 });
-        }
-
-        // Add member
         const result = await db.query(
-            `INSERT INTO project_members (project_id, user_id, role, joined_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING *`,
-            [projectId, user_id, role]
+            `INSERT INTO project_members (project_id, user_id, role, created_at, updated_at)
+             VALUES ${values}
+             ON CONFLICT (project_id, user_id) DO NOTHING
+             RETURNING *`,
+            queryParams
         );
 
-        return corsResponse({ data: result.rows[0] }, request, { status: 201 });
-    } catch (error: any) {
-        console.error('Error adding project member:', error);
-        return corsResponse({ error: error.message }, request, { status: 500 });
+        return corsResponse(result.rows, request, { status: 201 });
+    } catch (error) {
+        console.error('POST /api/projects/[id]/members error:', error);
+        return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });
     }
 }

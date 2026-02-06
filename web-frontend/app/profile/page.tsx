@@ -12,6 +12,12 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({ name: '', email: '' });
+    const [passwordData, setPasswordData] = useState({ 
+        currentPassword: '', 
+        newPassword: '', 
+        confirmPassword: '' 
+    });
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
 
     useEffect(() => {
         if (!isLoading && !user) {
@@ -48,10 +54,48 @@ export default function ProfilePage() {
             alert('Profil mis à jour avec succès');
             loadProfile();
         } catch (error: any) {
-            console.error('Error updating profile:', error);
-            alert(error.response?.data?.error || 'Erreur lors de la mise à jour');
+            alert('Erreur lors de la mise à jour: ' + (error.message || 'Erreur inconnue'));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            alert('Les mots de passe ne correspondent pas');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 6) {
+            alert('Le mot de passe doit contenir au moins 6 caractères');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/change-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify({
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword,
+                }),
+            });
+
+            if (response.ok) {
+                alert('Mot de passe changé avec succès');
+                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setShowPasswordForm(false);
+            } else {
+                const error = await response.json();
+                alert('Erreur: ' + (error.error || 'Impossible de changer le mot de passe'));
+            }
+        } catch (error) {
+            alert('Erreur lors du changement de mot de passe');
         }
     };
 
@@ -66,6 +110,17 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header with back button */}
+                <button
+                    onClick={() => window.history.back()}
+                    className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+                >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Retour
+                </button>
+                
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Mon Profil</h1>
 
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -119,6 +174,71 @@ export default function ProfilePage() {
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {/* Password Change Section */}
+                <div className="bg-white rounded-lg shadow p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-900">Mot de passe</h2>
+                        <button
+                            type="button"
+                            onClick={() => setShowPasswordForm(!showPasswordForm)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                            {showPasswordForm ? 'Annuler' : 'Changer le mot de passe'}
+                        </button>
+                    </div>
+
+                    {showPasswordForm && (
+                        <form onSubmit={handlePasswordChange} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Mot de passe actuel
+                                </label>
+                                <input
+                                    type="password"
+                                    value={passwordData.currentPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nouveau mot de passe
+                                </label>
+                                <input
+                                    type="password"
+                                    value={passwordData.newPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Confirmer le nouveau mot de passe
+                                </label>
+                                <input
+                                    type="password"
+                                    value={passwordData.confirmPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                                >
+                                    Changer le mot de passe
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </div>
             </div>
         </div>
