@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -137,8 +135,10 @@ services:
       - app-network
     restart: unless-stopped
     depends_on:
-      - web-frontend
-      - api-backend
+      web-frontend:
+        condition: service_started
+      api-backend:
+        condition: service_started
 
 networks:
   app-network:
