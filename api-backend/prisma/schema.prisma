@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  name              String?
+  password          String?
+  role_id           String?  @map("role_id")
+  role              String?  @default("employee")
+  is_active         Boolean  @default(true)
+  phone             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  created_projects  Project[] @relation("ProjectCreator")
+  managed_projects  Project[] @relation("ProjectManager")
+  project_members   ProjectMember[]
+  task_assignees    TaskAssignee[]
+  task_responses    TaskResponse[]
+  notifications     Notification[]
+  email_confirmations EmailConfirmation[]
+  email_logs        EmailLog[]
+  activity_logs     ActivityLog[]
+  notification_preferences NotificationPreference[]
+  user_settings     UserSettings?
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  role_permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  resource    String
+  action      String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id            String   @id @default(uuid())
+  role_id       String
+  permission_id String
+  created_at    DateTime @default(now())
+
+  // Relations
+  role          Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@map("role_permissions")
+}
+
+model Project {
+  id            String    @id @default(uuid())
+  title         String
+  description   String?
+  start_date    DateTime?
+  end_date      DateTime?
+  due_date      DateTime?
+  status        String    @default("PLANNING")
+  created_by_id String?
+  manager_id    String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  // Relations
+  created_by    User?     @relation("ProjectCreator", fields: [created_by_id], references: [id])
+  manager       User?     @relation("ProjectManager", fields: [manager_id], references: [id])
+  stages        Stage[]
+  tasks         Task[]
+  project_members ProjectMember[]
+
+  @@map("projects")
+}
+
+model Stage {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  position      Int      @default(0)
+  duration      Int?
+  status        String   @default("PENDING")
+  project_id    String
+  created_by_id String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  project       Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  created_by    User?   @relation(fields: [created_by_id], references: [id])
+  tasks         Task[]
+
+  @@map("stages")
+}
+
+model Task {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  status         String    @default("TODO")
+  priority       String    @default("MEDIUM")
+  due_date       DateTime?
+  completed_at   DateTime?
+  project_id     String
+  stage_id       String?
+  created_by_id  String?
+  refusal_reason String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  // Relations
+  project        Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  stage          Stage?   @relation(fields: [stage_id], references: [id], onDelete: SetNull)
+  created_by     User?    @relation(fields: [created_by_id], references: [id])
+  assignees      TaskAssignee[]
+  reminders      TaskReminder[]
+  responses      TaskResponse[]
+
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  task_id     String   @map("task_id")
+  user_id     String   @map("user_id")
+  assigned_at DateTime @default(now())
+
+  // Relations
+  task        Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([task_id, user_id])
+  @@map("task_assignees")
+}
+
+model TaskReminder {
+  id            Int      @id @default(autoincrement())
+  task_id       String
+  reminder_type String
+  sent_at       DateTime @default(now())
+  created_at    DateTime @default(now())
+
+  // Relations
+  task          Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@map("task_reminders")
+}
+
+model TaskResponse {
+  id           Int      @id @default(autoincrement())
+  task_id      String
+  user_id      String
+  response     String
+  responded_at DateTime @default(now())
+  created_at   DateTime @default(now())
+
+  // Relations
+  task         Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user         User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("task_responses")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user_id   String
+  type      String   @default("INFO")
+  title     String
+  message   String
+  is_read   Boolean  @default(false)
+  metadata  Json?
+  created_at DateTime @default(now())
+
+  // Relations
+  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                      String   @id @default(uuid())
+  user_id                 String
+  email_task_assigned     Boolean  @default(true)
+  email_task_updated      Boolean  @default(true)
+  email_task_due          Boolean  @default(true)
+  email_stage_completed   Boolean  @default(false)
+  email_project_created   Boolean  @default(true)
+  push_notifications      Boolean  @default(true)
+  daily_summary           Boolean  @default(false)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  // Relations
+  user                    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model EmailConfirmation {
+  id           String    @id @default(uuid())
+  token        String
+  type         String
+  user_id      String
+  entity_type  String
+  entity_id    String
+  metadata     Json?
+  confirmed    Boolean   @default(false)
+  confirmed_at DateTime?
+  expires_at   DateTime
+  created_at   DateTime  @default(now())
+
+  // Relations
+  user         User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("email_confirmations")
+}
+
+model EmailLog {
+  id            String    @id @default(uuid())
+  recipient_id  String?
+  recipient     String
+  subject       String
+  body          String
+  status        String    @default("PENDING")
+  sent_at       DateTime?
+  error_message String?
+  metadata      Json?
+  created_at    DateTime  @default(now())
+
+  @@map("email_logs")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  user_id    String
+  action     String
+  entity_type String
+  entity_id  String
+  details    String?
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  // Relations
+  user       User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+model UserSettings {
+  id                      String   @id @default(uuid())
+  user_id                 String   @unique
+  language                String   @default("fr")
+  timezone                String   @default("Europe/Paris")
+  notifications_enabled   Boolean  @default(true)
+  email_notifications     Boolean  @default(true)
+  theme                   String   @default("light")
+  date_format             String   @default("DD/MM/YYYY")
+  items_per_page          Int      @default(20)
+  font_size               String   @default("medium")
+  compact_mode            Boolean  @default(false)
+  permissions             Json     @default("[]")
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  // Relations
+  user                    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}

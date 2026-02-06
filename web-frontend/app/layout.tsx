@@ -6,7 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'TDR2 - Gestion de Projets',
+    title: 'Team Project - Gestion de Projets',
     description: 'Plateforme de gestion et suivi de projets',
 };
 

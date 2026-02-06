@@ -1,7 +1,6 @@
 // core/domain/UserSettings.ts
 export class UserSettings {
   constructor(
-    public id: string,
     public user_id: string,
     public language: string | null,
     public timezone: string | null,
@@ -13,7 +12,6 @@ export class UserSettings {
     public font_size: string | null,
     public compact_mode: boolean | null,
     public created_at: Date | null,
-    public updated_at: Date | null,
-    public permissions: any | null
+    public updated_at: Date | null
   ) {}
 }

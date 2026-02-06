@@ -48,7 +48,7 @@ export default function RegisterPage() {
                     <div className="mx-auto w-48 h-48 flex items-center justify-center">
                         <img
                             src="/logo.png"
-                            alt="TDR2 Logo"
+                            alt="Team Project Logo"
                             className="w-48 h-48"
                         />
                     </div>
