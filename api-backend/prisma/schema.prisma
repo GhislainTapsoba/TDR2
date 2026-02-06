@@ -20,17 +20,20 @@ model User {
   updated_at        DateTime @updatedAt
 
   // Relations
+  user_role        Role?    @relation("UserRole", fields: [role_id], references: [id])
   created_projects  Project[] @relation("ProjectCreator")
   managed_projects  Project[] @relation("ProjectManager")
-  project_members   ProjectMember[]
-  task_assignees    TaskAssignee[]
-  task_responses    TaskResponse[]
-  notifications     Notification[]
+  project_members  ProjectMember[]
+  task_assignees  TaskAssignee[]
+  task_responses  TaskResponse[]
+  notifications   Notification[]
   email_confirmations EmailConfirmation[]
-  email_logs        EmailLog[]
-  activity_logs     ActivityLog[]
+  email_logs      EmailLog[]
+  activity_logs    ActivityLog[]
   notification_preferences NotificationPreference[]
-  user_settings     UserSettings?
+  user_settings    UserSettings?
+  created_stages   Stage[] @relation("StageCreator")
+  created_tasks    Task[] @relation("TaskCreator")
 
   @@map("users")
 }
@@ -43,7 +46,7 @@ model Role {
   updated_at  DateTime @updatedAt
 
   // Relations
-  users       User[]
+  users       User[] @relation("UserRole")
   role_permissions RolePermission[]
 
   @@map("roles")
@@ -75,6 +78,21 @@ model RolePermission {
   permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
   @@map("role_permissions")
+}
+
+model ProjectMember {
+  id         String   @id @default(uuid())
+  project_id String
+  user_id    String
+  role       String?  @default("member")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  project     Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("project_members")
 }
 
 model Project {
@@ -114,7 +132,7 @@ model Stage {
 
   // Relations
   project       Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
-  created_by    User?   @relation(fields: [created_by_id], references: [id])
+  created_by    User?   @relation("StageCreator", fields: [created_by_id], references: [id])
   tasks         Task[]
 
   @@map("stages")
@@ -138,7 +156,7 @@ model Task {
   // Relations
   project        Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   stage          Stage?   @relation(fields: [stage_id], references: [id], onDelete: SetNull)
-  created_by     User?    @relation(fields: [created_by_id], references: [id])
+  created_by     User?    @relation("TaskCreator", fields: [created_by_id], references: [id])
   assignees      TaskAssignee[]
   reminders      TaskReminder[]
   responses      TaskResponse[]
@@ -252,6 +270,9 @@ model EmailLog {
   error_message String?
   metadata      Json?
   created_at    DateTime  @default(now())
+
+  // Relations
+  user          User? @relation(fields: [recipient_id], references: [id], onDelete: SetNull)
 
   @@map("email_logs")
 }
