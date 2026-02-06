@@ -9,4 +9,6 @@ export interface TaskCreationData {
 
 export interface TaskRepository {
   createMany(tasks: TaskCreationData[]): Promise<void>;
+  findById(id: string): Promise<any>;
+  save(task: any): Promise<void>;
 }

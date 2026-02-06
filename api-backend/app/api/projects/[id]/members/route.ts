@@ -10,15 +10,16 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/projects/[id]/members - Get project members
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const projectId = params.id;
+        const paramsResolved = await params;
+        const projectId = paramsResolved.id;
 
         // Get project members with user details
         const result = await db.query(
@@ -47,15 +48,16 @@ export async function GET(
 // POST /api/projects/[id]/members - Add member to project
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const projectId = params.id;
+        const paramsResolved = await params;
+        const projectId = paramsResolved.id;
         const { user_id, role = 'member' } = await request.json();
 
         if (!user_id) {
@@ -72,8 +74,8 @@ export async function POST(
             return corsResponse({ error: 'Projet non trouvé' }, request, { status: 404 });
         }
 
-        const isManager = projectCheck.rows[0].manager_id === authResult.user.id;
-        const isAdmin = authResult.user.role === 'admin';
+        const isManager = projectCheck.rows[0].manager_id === user.id;
+        const isAdmin = user.role === 'admin';
 
         if (!isManager && !isAdmin) {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });

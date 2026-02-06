@@ -1,6 +1,6 @@
-import { StageRepository } from "@/core/ports/repositories/StageRepository";
-import { TaskRepository } from "@/core/ports/repositories/TaskRepository";
-import { NotificationPort } from "@/core/ports/mail/NotificationPort";
+import { StageRepository } from "@/core/ports/stageRepository";
+import { TaskRepository } from "@/core/ports/TaskRepository";
+import { NotificationPort } from "@/core/ports/notificationRepository";
 import { TaskGenerationService } from "@/core/services/TaskGenerationService";
 import { Stage } from "@/core/domain/Stage";
 
@@ -28,8 +28,8 @@ export class ValidateStage {
     await this.notification.notify({
       userId: actorId,
       title: `Étape "${stage.name}" validée`,
-      message: `L'étape "${stage.name}" du projet ${stage.projectId} a été validée.`,
-      actionUrl: `/projects/${stage.projectId}/stages/${stage.id}`
+      message: `L'étape "${stage.name}" du projet ${stage.project_id} a été validée.`,
+      actionUrl: `/projects/${stage.project_id}/stages/${stage.id}`
     });
   }
 }

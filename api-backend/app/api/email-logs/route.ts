@@ -11,13 +11,13 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/email-logs - Get email logs
 export async function GET(request: NextRequest) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
         // Only admins can view email logs
-        if (authResult.user.role !== 'admin') {
+        if (user.role !== 'admin') {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 

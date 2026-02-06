@@ -10,15 +10,16 @@ export async function OPTIONS(request: NextRequest) {
 // DELETE /api/reminders/[id] - Delete reminder
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const reminderId = params.id;
+        const { id } = await params;
+        const reminderId = id;
 
         const result = await db.query(
             'DELETE FROM task_reminders WHERE id = $1 RETURNING *',

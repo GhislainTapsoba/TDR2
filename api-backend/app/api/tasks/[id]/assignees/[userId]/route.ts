@@ -10,16 +10,17 @@ export async function OPTIONS(request: NextRequest) {
 // DELETE /api/tasks/[id]/assignees/[userId] - Remove task assignee
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string; userId: string } }
+    { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
-        const userId = params.userId;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
+        const userId = paramsResolved.userId;
 
         const result = await db.query(
             'DELETE FROM task_assignees WHERE task_id = $1 AND user_id = $2 RETURNING *',

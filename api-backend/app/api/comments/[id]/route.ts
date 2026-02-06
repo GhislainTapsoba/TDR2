@@ -8,10 +8,9 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // PUT /api/comments/[id] - Update a comment
-// @ts-ignore
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -19,7 +18,7 @@ export async function PUT(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { content } = body;
 
@@ -59,7 +58,7 @@ export async function PUT(
 // DELETE /api/comments/[id] - Delete a comment
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -67,7 +66,7 @@ export async function DELETE(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         // Check if comment exists and user is author
         const { rows: commentRows } = await db.query(

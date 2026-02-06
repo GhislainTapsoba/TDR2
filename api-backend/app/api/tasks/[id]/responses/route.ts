@@ -10,15 +10,16 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/tasks/[id]/responses - Get task responses
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
 
         const result = await db.query(
             `SELECT 
@@ -47,15 +48,16 @@ export async function GET(
 // POST /api/tasks/[id]/responses - Create task response
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
         const { response } = await request.json();
 
         if (!response) {
@@ -66,7 +68,7 @@ export async function POST(
             `INSERT INTO task_responses (task_id, user_id, response, responded_at, created_at)
        VALUES ($1, $2, $3, NOW(), NOW())
        RETURNING *`,
-            [taskId, authResult.user.id, response]
+            [taskId, user.id, response]
         );
 
         return corsResponse({ data: result.rows[0] }, request, { status: 201 });

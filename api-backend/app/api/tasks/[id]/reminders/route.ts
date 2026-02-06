@@ -10,15 +10,16 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/tasks/[id]/reminders - Get task reminders
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
 
         const result = await db.query(
             `SELECT 
@@ -43,15 +44,16 @@ export async function GET(
 // POST /api/tasks/[id]/reminders - Create task reminder
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
         const { reminder_type = 'EMAIL' } = await request.json();
 
         // Validate reminder_type

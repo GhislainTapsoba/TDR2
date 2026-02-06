@@ -12,7 +12,7 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/tasks/[id] - Get a single task
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -20,7 +20,7 @@ export async function GET(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         const { rows } = await db.query(
             `SELECT t.*, p.title as project_title, s.name as stage_name, c.name as created_by_name,
@@ -50,7 +50,7 @@ export async function GET(
 // PUT /api/tasks/[id] - Update a task
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -64,7 +64,7 @@ export async function PUT(
             return corsResponse({ error: perm.error }, request, { status: 403 });
         }
 
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { title, description, status, priority, due_date, assignee_ids, stage_id, refusal_reason } = body;
 
@@ -216,7 +216,7 @@ export async function PUT(
 // DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -230,7 +230,7 @@ export async function DELETE(
             return corsResponse({ error: perm.error }, request, { status: 403 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         // Check if task exists
         const { rows: taskRows } = await db.query(

@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/documents/[id] - Get a single document
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -19,7 +19,7 @@ export async function GET(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         const { rows } = await db.query(
             `SELECT d.*, p.title as project_title, t.title as task_title, u.name as uploaded_by_name
@@ -45,7 +45,7 @@ export async function GET(
 // DELETE /api/documents/[id] - Delete a document
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -59,7 +59,7 @@ export async function DELETE(
             return corsResponse({ error: perm.error }, request, { status: 403 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         // Check if document exists
         const { rows: docRows } = await db.query(

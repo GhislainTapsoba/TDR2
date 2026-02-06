@@ -10,15 +10,16 @@ export async function OPTIONS(request: NextRequest) {
 // PUT /api/responses/[id] - Update response
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const responseId = params.id;
+        const { id } = await params;
+        const responseId = id;
         const { response } = await request.json();
 
         if (!response) {
@@ -35,12 +36,12 @@ export async function PUT(
             return corsResponse({ error: 'Réponse non trouvée' }, request, { status: 404 });
         }
 
-        if (checkResult.rows[0].user_id !== authResult.user.id && authResult.user.role !== 'admin') {
+        if (checkResult.rows[0].user_id !== user.id && user.role !== 'admin') {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 
         const result = await db.query(
-            `UPDATE task_responses 
+            `UPDATE task_responses
        SET response = $1, responded_at = NOW()
        WHERE id = $2
        RETURNING *`,
@@ -57,15 +58,16 @@ export async function PUT(
 // DELETE /api/responses/[id] - Delete response
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const responseId = params.id;
+        const { id } = await params;
+        const responseId = id;
 
         // Check ownership
         const checkResult = await db.query(
@@ -77,7 +79,7 @@ export async function DELETE(
             return corsResponse({ error: 'Réponse non trouvée' }, request, { status: 404 });
         }
 
-        if (checkResult.rows[0].user_id !== authResult.user.id && authResult.user.role !== 'admin') {
+        if (checkResult.rows[0].user_id !== user.id && user.role !== 'admin') {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 

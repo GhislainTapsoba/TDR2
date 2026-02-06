@@ -11,15 +11,16 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/tasks/[id]/assignees - Get task assignees
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
 
         const result = await db.query(
             `SELECT 
@@ -49,15 +50,16 @@ export async function GET(
 // POST /api/tasks/[id]/assignees - Assign task to user
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const taskId = params.id;
+        const paramsResolved = await params;
+        const taskId = paramsResolved.id;
         const { user_id } = await request.json();
 
         if (!user_id) {
@@ -103,7 +105,7 @@ export async function POST(
             `INSERT INTO task_assignees (task_id, user_id, assigned_by, assigned_at)
        VALUES ($1, $2, $3, NOW())
        RETURNING *`,
-            [taskId, user_id, authResult.user.id]
+            [taskId, user_id, user.id]
         );
 
         // Send email notification

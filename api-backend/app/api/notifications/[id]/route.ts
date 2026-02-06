@@ -10,7 +10,7 @@ export async function OPTIONS(request: NextRequest) {
 // PUT /api/notifications/[id] - Mark notification as read
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -18,7 +18,7 @@ export async function PUT(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         // Check if notification belongs to user
         const { rows: notifRows } = await db.query(
@@ -48,7 +48,7 @@ export async function PUT(
 // DELETE /api/notifications/[id] - Delete notification
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await verifyAuth(request);
@@ -56,7 +56,7 @@ export async function DELETE(
             return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
 
         // Check if notification belongs to user
         const { rows: notifRows } = await db.query(

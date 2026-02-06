@@ -10,16 +10,17 @@ export async function OPTIONS(request: NextRequest) {
 // DELETE /api/projects/[id]/members/[userId] - Remove member from project
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string; userId: string } }
+    { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
     try {
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
-            return corsResponse({ error: 'Non authentifié' }, request, { status: 401 });
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
         }
 
-        const projectId = params.id;
-        const userId = params.userId;
+        const paramsResolved = await params;
+        const projectId = paramsResolved.id;
+        const userId = paramsResolved.userId;
 
         // Check if user is project manager or admin
         const projectCheck = await db.query(
@@ -31,8 +32,8 @@ export async function DELETE(
             return corsResponse({ error: 'Projet non trouvé' }, request, { status: 404 });
         }
 
-        const isManager = projectCheck.rows[0].manager_id === authResult.user.id;
-        const isAdmin = authResult.user.role === 'admin';
+        const isManager = projectCheck.rows[0].manager_id === user.id;
+        const isAdmin = user.role === 'admin';
 
         if (!isManager && !isAdmin) {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });

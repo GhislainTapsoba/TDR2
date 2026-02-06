@@ -1,7 +1,7 @@
 import { db } from './db';
 
 export type UserRole = 'admin' | 'manager' | 'employee';
-export type ResourceType = 'users' | 'projects' | 'stages' | 'tasks' | 'notifications' | 'settings';
+export type ResourceType = 'users' | 'projects' | 'stages' | 'tasks' | 'notifications' | 'settings' | 'documents' | 'permissions' | 'roles';
 export type ActionType = 'create' | 'read' | 'update' | 'delete';
 
 interface PermissionCheck {
@@ -42,6 +42,9 @@ export async function requirePermission(
             tasks: ['create', 'read', 'update', 'delete'],
             notifications: ['create', 'read', 'update', 'delete'],
             settings: ['create', 'read', 'update', 'delete'],
+            documents: ['create', 'read', 'update', 'delete'],
+            permissions: ['read'],
+            roles: ['read'],
         },
         manager: {
             users: ['read'],
@@ -50,6 +53,9 @@ export async function requirePermission(
             tasks: ['create', 'read', 'update', 'delete'],
             notifications: ['read', 'update', 'delete'],
             settings: ['read', 'update'],
+            documents: ['create', 'read', 'update', 'delete'],
+            permissions: [],
+            roles: [],
         },
         employee: {
             users: ['read'],
@@ -58,6 +64,9 @@ export async function requirePermission(
             tasks: ['read', 'update'],
             notifications: ['read', 'update', 'delete'],
             settings: ['read', 'update'],
+            documents: ['read', 'update'],
+            permissions: [],
+            roles: [],
         },
     };
 
