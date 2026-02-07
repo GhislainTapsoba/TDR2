@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { corsResponse, handleCorsOptions } from '@/lib/cors';
+import ReminderService from '@/lib/reminderService';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -21,14 +22,22 @@ export async function DELETE(
         const { id } = await params;
         const reminderId = id;
 
-        const result = await db.query(
-            'DELETE FROM task_reminders WHERE id = $1 RETURNING *',
+        // Vérifier que le rappel appartient à l'utilisateur
+        const { rows } = await db.query(
+            'SELECT user_id FROM reminders WHERE id = $1',
             [reminderId]
         );
 
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
             return corsResponse({ error: 'Rappel non trouvé' }, request, { status: 404 });
         }
+
+        if (rows[0].user_id !== user.id) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 403 });
+        }
+
+        const reminderService = ReminderService.getInstance();
+        await reminderService.cancelReminder(reminderId);
 
         return corsResponse({ message: 'Rappel supprimé avec succès' }, request);
     } catch (error: any) {

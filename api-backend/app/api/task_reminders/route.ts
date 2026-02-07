@@ -2,12 +2,13 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
+import ReminderService from '@/lib/reminderService';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
 }
 
-// GET /api/task_reminders - Get all task reminders
+// GET /api/task_reminders - Get all task reminders for authenticated user
 export async function GET(request: NextRequest) {
     try {
         const user = await verifyAuth(request);
@@ -16,7 +17,13 @@ export async function GET(request: NextRequest) {
         }
 
         const { rows } = await db.query(
-            'SELECT * FROM task_reminders ORDER BY reminder_date DESC'
+            `SELECT r.*, t.title as task_title, t.description as task_description,
+                    t.due_date as task_due_date, t.priority as task_priority, t.status as task_status
+             FROM reminders r
+             JOIN tasks t ON r.task_id = t.id
+             WHERE r.user_id = $1
+             ORDER BY r.reminder_time DESC`,
+            [user.id]
         );
 
         return corsResponse(rows, request);
@@ -35,18 +42,26 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { task_id, reminder_date, message } = body;
+        const { task_id, reminder_time, reminder_type = 'email', message } = body;
 
-        if (!task_id || !reminder_date) {
-            return corsResponse({ error: 'task_id et reminder_date requis' }, request, { status: 400 });
+        if (!task_id || !reminder_time) {
+            return corsResponse({ error: 'task_id et reminder_time requis' }, request, { status: 400 });
         }
 
-        const { rows } = await db.query(
-            'INSERT INTO task_reminders (task_id, reminder_date, message, created_by_id, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-            [task_id, reminder_date, message, user.id]
+        if (!['email', 'sms', 'whatsapp'].includes(reminder_type)) {
+            return corsResponse({ error: 'reminder_type doit être email, sms ou whatsapp' }, request, { status: 400 });
+        }
+
+        const reminderService = ReminderService.getInstance();
+        const reminder = await reminderService.scheduleReminder(
+            task_id,
+            user.id,
+            new Date(reminder_time),
+            reminder_type,
+            message
         );
 
-        return corsResponse(rows[0], request, { status: 201 });
+        return corsResponse(reminder, request, { status: 201 });
     } catch (error) {
         console.error('POST /api/task_reminders error:', error);
         return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });

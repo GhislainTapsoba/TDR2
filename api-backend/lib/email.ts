@@ -22,6 +22,8 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
 const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v17.0/YOUR_PHONE_NUMBER_ID';
+const WHATSAPP_API_TOKEN = process.env.WHATSAPP_API_TOKEN || '';
 
 interface EmailOptions {
   to: string;
@@ -42,6 +44,24 @@ interface WhatsAppOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
+    // En mode développement/test, simuler l'envoi d'email
+    if (process.env.NODE_ENV !== 'production' || process.env.MAILJET_API_KEY === 'f1e2b7e5c4b0a0b5f8e4e3e5f8e4e3e5') {
+      console.log('📧 EMAIL SIMULÉ (Mode Test):');
+      console.log('To:', options.to);
+      console.log('Subject:', options.subject);
+      console.log('HTML:', options.html);
+      
+      // Log email dans la base de données
+      await db.query(
+        `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
+         VALUES ($1, $2, $3, NOW(), 'sent')`,
+        [options.to, options.subject, options.html]
+      );
+      
+      return;
+    }
+
+    // En production, utiliser Mailjet
     const request = getMailjet().post('send', { version: 'v3.1' }).request({
       Messages: [
         {
@@ -85,6 +105,22 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
 export async function sendSMS(options: SMSOptions): Promise<void> {
   try {
+    // En mode développement/test, simuler l'envoi SMS
+    if (process.env.NODE_ENV !== 'production' || TWILIO_ACCOUNT_SID === 'your_twilio_account_sid') {
+      console.log('📱 SMS SIMULÉ (Mode Test):');
+      console.log('To:', options.to);
+      console.log('Message:', options.message);
+      
+      // Log SMS dans la base de données
+      await db.query(
+        `INSERT INTO sms_logs (recipient, message, sent_at, status)
+         VALUES ($1, $2, NOW(), 'sent')`,
+        [options.to, options.message]
+      );
+      
+      return;
+    }
+
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
       {
@@ -105,193 +141,94 @@ export async function sendSMS(options: SMSOptions): Promise<void> {
       throw new Error(`Twilio SMS error: ${response.statusText}`);
     }
 
+    // Log SMS dans la base de données
+    await db.query(
+      `INSERT INTO sms_logs (recipient, message, sent_at, status)
+         VALUES ($1, $2, NOW(), 'sent')`,
+      [options.to, options.message]
+    );
+
     console.log('SMS sent successfully to:', options.to);
   } catch (error) {
     console.error('Error sending SMS:', error);
+    
+    // Log failed SMS
+    await db.query(
+      `INSERT INTO sms_logs (recipient, message, sent_at, status, error_message)
+         VALUES ($1, $2, NOW(), 'failed', $3)`,
+      [options.to, options.message, (error as Error).message]
+    );
+    
     throw error;
   }
 }
 
 export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
   try {
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64')}`,
-        },
-        body: new URLSearchParams({
-          From: TWILIO_WHATSAPP_NUMBER,
-          To: `whatsapp:${options.to}`,
-          Body: options.message,
-        }),
-      }
-    );
+    // En mode développement/test, simuler l'envoi WhatsApp
+    if (process.env.NODE_ENV !== 'production' || WHATSAPP_API_TOKEN === 'your_whatsapp_api_token') {
+      console.log('💬 WHATSAPP SIMULÉ (Mode Test):');
+      console.log('To:', options.to);
+      console.log('Message:', options.message);
+      
+      // Log WhatsApp dans la base de données
+      await db.query(
+        `INSERT INTO whatsapp_logs (recipient, message, sent_at, status)
+         VALUES ($1, $2, NOW(), 'sent')`,
+        [options.to, options.message]
+      );
+      
+      return;
+    }
+
+    const response = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${WHATSAPP_API_TOKEN}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: options.to.replace('+', ''), // Remove + if present
+        type: 'template',
+        template: {
+          name: 'reminder_template',
+          language: {
+            policy: 'deterministic',
+            code: 'fr'
+          },
+          components: [
+            {
+              type: 'body',
+              text: options.message
+            }
+          ]
+        }
+      }),
+    });
 
     if (!response.ok) {
-      throw new Error(`Twilio WhatsApp error: ${response.statusText}`);
+      throw new Error(`WhatsApp error: ${response.statusText}`);
     }
 
-    console.log('WhatsApp message sent successfully to:', options.to);
-  } catch (error) {
-    console.error('Error sending WhatsApp message:', error);
-    throw error;
-  }
-}
-
-export async function sendTaskReminder(
-  taskId: string,
-  userId: string,
-  channels: string[] = ['email']
-): Promise<void> {
-  try {
-    // Get task details
-    const taskResult = await db.query(
-      'SELECT title, description, due_date FROM tasks WHERE id = $1',
-      [taskId]
+    // Log WhatsApp dans la base de données
+    await db.query(
+      `INSERT INTO whatsapp_logs (recipient, message, sent_at, status)
+         VALUES ($1, $2, NOW(), 'sent')`,
+      [options.to, options.message]
     );
 
-    if (taskResult.rows.length === 0) {
-      throw new Error('Task not found');
-    }
-
-    const task = taskResult.rows[0];
-
-    // Get user details
-    const userResult = await db.query(
-      'SELECT name, email, phone FROM users WHERE id = $1',
-      [userId]
+    console.log('WhatsApp sent successfully to:', options.to);
+  } catch (error) {
+    console.error('Error sending WhatsApp:', error);
+    
+    // Log failed WhatsApp
+    await db.query(
+      `INSERT INTO whatsapp_logs (recipient, message, sent_at, status, error_message)
+         VALUES ($1, $2, NOW(), 'failed', $3)`,
+      [options.to, options.message, (error as Error).message]
     );
-
-    if (userResult.rows.length === 0) {
-      throw new Error('User not found');
-    }
-
-    const user = userResult.rows[0];
-
-    const message = `Rappel: La tâche "${task.title}" arrive à échéance le ${new Date(task.due_date).toLocaleDateString()}. Veuillez la compléter à temps.`;
-
-    // Send via selected channels
-    const promises = [];
-
-    if (channels.includes('email')) {
-      promises.push(
-        sendEmail({
-          to: user.email,
-          subject: `Rappel de tâche: ${task.title}`,
-          html: `
-            <h2>Rappel de tâche</h2>
-            <p>Bonjour ${user.name},</p>
-            <p>${message}</p>
-            <h3>${task.title}</h3>
-            <p>${task.description || ''}</p>
-            <p><strong>Date limite:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
-          `,
-          text: message,
-        })
-      );
-    }
-
-    if (channels.includes('sms') && user.phone) {
-      promises.push(sendSMS({ to: user.phone, message }));
-    }
-
-    if (channels.includes('whatsapp') && user.phone) {
-      promises.push(sendWhatsApp({ to: user.phone, message }));
-    }
-
-    await Promise.all(promises);
-  } catch (error) {
-    console.error('Error sending task reminder:', error);
+    
     throw error;
   }
-}
-
-export async function sendTaskUpdateEmail(options: {
-  to: string;
-  recipientId: string;
-  recipientName: string;
-  taskTitle: string;
-  taskId: string;
-  projectName: string;
-  updatedBy: string;
-  changes: string;
-}): Promise<void> {
-  try {
-    const subject = `Mise à jour de la tâche: ${options.taskTitle}`;
-    const message = `La tâche "${options.taskTitle}" a été mise à jour.`;
-
-    await sendEmail({
-      to: options.to,
-      subject: subject,
-      html: `
-        <h2>Mise à jour de la tâche</h2>
-        <p>Bonjour ${options.recipientName},</p>
-        <p>${options.changes} par ${options.updatedBy}.</p>
-        <h3>${options.taskTitle}</h3>
-        <p>Projet: ${options.projectName}</p>
-        <p>ID de la tâche: ${options.taskId}</p>
-      `,
-      text: message,
-    });
-  } catch (error) {
-    console.error('Error sending task update email:', error);
-    throw error;
-  }
-}
-
-export async function sendTaskAssignmentEmail(options: {
-  to: string;
-  recipientId: string;
-  recipientName: string;
-  taskTitle: string;
-  taskId: string;
-  projectName: string;
-  assignedBy: string;
-  confirmationToken: string;
-}): Promise<void> {
-  try {
-    const subject = `Nouvelle tâche assignée: ${options.taskTitle}`;
-    const message = `Une nouvelle tâche, "${options.taskTitle}", vous a été assignée par ${options.assignedBy}.`;
-
-    await sendEmail({
-      to: options.to,
-      subject: subject,
-      html: `
-        <h2>Nouvelle tâche assignée</h2>
-        <p>Bonjour ${options.recipientName},</p>
-        <p>${message}</p>
-        <h3>${options.taskTitle}</h3>
-        <p>Projet: ${options.projectName}</p>
-        <p>ID de la tâche: ${options.taskId}</p>
-        <p>Token de confirmation: ${options.confirmationToken}</p>
-      `,
-      text: message,
-    });
-  } catch (error) {
-    console.error('Error sending task assignment email:', error);
-    throw error;
-  }
-}
-
-export async function createConfirmationToken(params: {
-  type: string;
-  userId: string;
-  entityType: string;
-  entityId: string;
-  metadata?: Record<string, any>;
-}): Promise<string> {
-  const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 24);
-
-  await db.query(
-    `INSERT INTO email_confirmations (token, type, user_id, entity_type, entity_id, metadata, expires_at, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-    [token, params.type, params.userId, params.entityType, params.entityId, JSON.stringify(params.metadata || {}), expiresAt]
-  );
-
-  return token;
 }
