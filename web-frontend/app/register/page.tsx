@@ -10,6 +10,7 @@ export default function RegisterPage() {
     const { register } = useAuth();
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -29,10 +30,22 @@ export default function RegisterPage() {
             return;
         }
 
+        if (!phone.trim()) {
+            setError('Le numéro de téléphone est obligatoire');
+            return;
+        }
+
+        // Validation internationale de numéro de téléphone
+        const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+        if (!phoneRegex.test(phone.trim().replace(/\s/g, ''))) {
+            setError('Format de numéro invalide. Utilisez : +226 12345678, +33 612345678, ou format international');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await register(email, name, password);
+            await register(email, name, password, phone);
             router.push('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.error || 'Erreur lors de l\'inscription');
@@ -95,6 +108,22 @@ export default function RegisterPage() {
                                 placeholder="email@exemple.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                Téléphone *
+                            </label>
+                            <input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                autoComplete="tel"
+                                required
+                                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                placeholder="+226 12345678, +33 612345678, ou format international"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
                             />
                         </div>
                         <div>

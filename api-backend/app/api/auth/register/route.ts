@@ -10,12 +10,12 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { email, name, password, role = 'employee' } = body;
+        const { email, name, password, phone, role = 'employee' } = body;
 
         // Validation
-        if (!email || !password) {
+        if (!email || !password || !phone) {
             return corsResponse(
-                { error: 'Email et mot de passe requis' },
+                { error: 'Email, mot de passe et numéro de téléphone requis' },
                 request,
                 { status: 400 }
             );
@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
         if (password.length < 6) {
             return corsResponse(
                 { error: 'Le mot de passe doit contenir au moins 6 caractères' },
+                request,
+                { status: 400 }
+            );
+        }
+
+        // Validation internationale de numéro de téléphone
+        const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+        if (!phoneRegex.test(phone.trim().replace(/\s/g, ''))) {
+            return corsResponse(
+                { error: 'Format de numéro invalide. Utilisez : +226 12345678, +33 612345678, ou format international' },
                 request,
                 { status: 400 }
             );
@@ -48,10 +58,10 @@ export async function POST(request: NextRequest) {
 
         // Create user
         const { rows } = await db.query(
-            `INSERT INTO users (email, name, password, role, is_active)
-       VALUES ($1, $2, $3, $4, true)
-       RETURNING id, email, name, role`,
-            [email, name || null, hashedPassword, role]
+            `INSERT INTO users (email, name, phone, password, role, is_active)
+       VALUES ($1, $2, $3, $4, $5, true)
+       RETURNING id, email, name, phone, role`,
+            [email, name || null, phone.trim(), hashedPassword, role]
         );
 
         const user = rows[0];
@@ -73,6 +83,7 @@ export async function POST(request: NextRequest) {
             id: user.id,
             email: user.email,
             name: user.name,
+            phone: user.phone,
             role: user.role,
         });
 
@@ -83,6 +94,7 @@ export async function POST(request: NextRequest) {
                     id: user.id,
                     email: user.email,
                     name: user.name,
+                    phone: user.phone,
                     role: user.role,
                 },
             },
