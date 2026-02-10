@@ -1,6 +1,0 @@
-- [x] Update nginx.conf: Change server_name from "tdr2.deep-technologies.com" to "teamproject.deep-technologies.com" in both server blocks.
-- [x] Update docker-compose.yml: Change all instances of "tdr2.deep-technologies.com" to "teamproject.deep-technologies.com" in environment variables.
-- [x] Update MAIL_FROM_NAME from "TDR2 Projects" to "TeamProject Projects".
-- [x] Update api-backend/package.json: Change name from "tdr2-api-backend" to "teamproject-api-backend".
-- [x] Update web-frontend/package.json: Change name from "tdr2-web-frontend" to "teamproject-web-frontend".
-- [x] Update README.md: Change title, MAIL_FROM_NAME example, and authors from "TDR2" to "TeamProject".
