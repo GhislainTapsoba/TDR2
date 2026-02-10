@@ -24,7 +24,7 @@ BEGIN
   VALUES (
     gen_random_uuid(),
     'arseneghislaintaps@gmail.com',
-    'TAPSOBA',
+    'Ghislain TAPSOBA',
     'admin',
     true,
     NOW(),
