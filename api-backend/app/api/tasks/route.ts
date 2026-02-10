@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
                         taskId: task.id,
                         projectName: project.title,
                         assignedBy: user.name || user.email,
+                        assignedById: user.id,
                         confirmationToken,
                     });
 

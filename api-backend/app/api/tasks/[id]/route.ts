@@ -173,6 +173,7 @@ export async function PUT(
                             taskId: id,
                             projectName: currentTask.project_title,
                             updatedBy: user.name || user.email,
+                            updatedById: user.id,
                             changes: 'Vous avez été assigné à cette tâche',
                         });
 

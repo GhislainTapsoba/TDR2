@@ -50,14 +50,14 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       console.log('To:', options.to);
       console.log('Subject:', options.subject);
       console.log('HTML:', options.html);
-      
+
       // Log email dans la base de données
       await db.query(
         `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
          VALUES ($1, $2, $3, NOW(), 'sent')`,
         [options.to, options.subject, options.html]
       );
-      
+
       return;
     }
 
@@ -110,14 +110,14 @@ export async function sendSMS(options: SMSOptions): Promise<void> {
       console.log('📱 SMS SIMULÉ (Mode Test):');
       console.log('To:', options.to);
       console.log('Message:', options.message);
-      
+
       // Log SMS dans la base de données
       await db.query(
         `INSERT INTO sms_logs (recipient, message, sent_at, status)
          VALUES ($1, $2, NOW(), 'sent')`,
         [options.to, options.message]
       );
-      
+
       return;
     }
 
@@ -151,14 +151,14 @@ export async function sendSMS(options: SMSOptions): Promise<void> {
     console.log('SMS sent successfully to:', options.to);
   } catch (error) {
     console.error('Error sending SMS:', error);
-    
+
     // Log failed SMS
     await db.query(
       `INSERT INTO sms_logs (recipient, message, sent_at, status, error_message)
          VALUES ($1, $2, NOW(), 'failed', $3)`,
       [options.to, options.message, (error as Error).message]
     );
-    
+
     throw error;
   }
 }
@@ -170,14 +170,14 @@ export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
       console.log('💬 WHATSAPP SIMULÉ (Mode Test):');
       console.log('To:', options.to);
       console.log('Message:', options.message);
-      
+
       // Log WhatsApp dans la base de données
       await db.query(
         `INSERT INTO whatsapp_logs (recipient, message, sent_at, status)
          VALUES ($1, $2, NOW(), 'sent')`,
         [options.to, options.message]
       );
-      
+
       return;
     }
 
@@ -221,14 +221,157 @@ export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
     console.log('WhatsApp sent successfully to:', options.to);
   } catch (error) {
     console.error('Error sending WhatsApp:', error);
-    
+
     // Log failed WhatsApp
     await db.query(
       `INSERT INTO whatsapp_logs (recipient, message, sent_at, status, error_message)
          VALUES ($1, $2, NOW(), 'failed', $3)`,
       [options.to, options.message, (error as Error).message]
     );
-    
+
+    throw error;
+  }
+}
+
+export async function createConfirmationToken(data: string | { type: string; userId: any; entityType: string; entityId: string; metadata?: any }): Promise<string> {
+  // Handle both string (email) and object formats
+  let email: string;
+  let metadata: any = null;
+
+  if (typeof data === 'string') {
+    email = data;
+  } else {
+    // Get user email from userId
+    const { rows } = await db.query('SELECT email FROM users WHERE id = $1', [data.userId]);
+    if (rows.length === 0) {
+      throw new Error('User not found');
+    }
+    email = rows[0].email;
+    metadata = data;
+  }
+
+  // Generate a simple token (in production, use a more secure method)
+  const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+
+  // Store token in database
+  await db.query(
+    `INSERT INTO email_confirmations (email, token, created_at, expires_at, metadata)
+     VALUES ($1, $2, NOW(), NOW() + INTERVAL '24 hours', $3)`,
+    [email, token, metadata ? JSON.stringify(metadata) : null]
+  );
+
+  return token;
+}
+
+export async function sendTaskUpdateEmail(data: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName?: string;
+  updatedBy?: string;
+  updatedById?: string;
+  changes?: string;
+}): Promise<void> {
+  try {
+    // Si nous avons l'ID de l'utilisateur qui met à jour, récupérons son nom complet
+    let updatedByName = data.updatedBy;
+    if (!updatedByName && data.updatedById) {
+      try {
+        const { rows } = await db.query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [data.updatedById]
+        );
+        if (rows.length > 0) {
+          const user = rows[0];
+          updatedByName = user.name || user.email || 'Un utilisateur';
+        }
+      } catch (error) {
+        console.error('Error fetching updater name:', error);
+        updatedByName = 'Un utilisateur';
+      }
+    }
+
+    const subject = `Mise à jour de la tâche: ${data.taskTitle}`;
+    const html = `
+      <h2>🔄 Mise à jour de la tâche</h2>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+        <p><strong>📂 Projet:</strong> ${data.projectName || 'N/A'}</p>
+        <p><strong>📋 Tâche:</strong> ${data.taskTitle}</p>
+        <p><strong>🆔 ID:</strong> ${data.taskId}</p>
+        <p><strong>👤 Mis à jour par:</strong> ${updatedByName || 'N/A'}</p>
+        <p><strong>📝 Modifications:</strong> ${data.changes || 'N/A'}</p>
+      </div>
+      <p>Bonjour ${data.recipientName},</p>
+      <p>Cette tâche a été mise à jour par <strong>${updatedByName || 'un utilisateur'}</strong>. Veuillez consulter le tableau de bord pour plus de détails.</p>
+    `;
+
+    await sendEmail({
+      to: data.to,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error sending task update email:', error);
+    throw error;
+  }
+}
+
+export async function sendTaskAssignmentEmail(data: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName?: string;
+  assignedBy?: string;
+  assignedById?: string;
+  confirmationToken?: string;
+}): Promise<void> {
+  try {
+    // Si nous avons l'ID de l'utilisateur qui assigne, récupérons son nom complet
+    let assignedByName = data.assignedBy;
+    if (!assignedByName && data.assignedById) {
+      try {
+        const { rows } = await db.query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [data.assignedById]
+        );
+        if (rows.length > 0) {
+          const user = rows[0];
+          assignedByName = user.name || user.email || 'Un utilisateur';
+        }
+      } catch (error) {
+        console.error('Error fetching assigner name:', error);
+        assignedByName = 'Un utilisateur';
+      }
+    }
+
+    const subject = `Nouvelle tâche assignée: ${data.taskTitle}`;
+    const html = `
+      <h2>🎯 Nouvelle tâche assignée</h2>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+        <p><strong>📂 Projet:</strong> ${data.projectName || 'N/A'}</p>
+        <p><strong>📋 Tâche:</strong> ${data.taskTitle}</p>
+        <p><strong>🆔 ID:</strong> ${data.taskId}</p>
+        <p><strong>👤 Assignée par:</strong> ${assignedByName || 'Un utilisateur'}</p>
+      </div>
+      <p>Bonjour ${data.recipientName},</p>
+      <p>Vous avez été assigné(e) à cette tâche par <strong>${assignedByName || 'un utilisateur'}</strong>. Veuillez consulter le tableau de bord pour plus de détails.</p>
+      ${data.confirmationToken ? `<div style="background-color: #e8f4fd; padding: 10px; border-radius: 5px; margin: 10px 0;"><p><strong>🔑 Token de confirmation:</strong> ${data.confirmationToken}</p></div>` : ''}
+      <p style="margin-top: 20px;">
+        <a href="#" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir la tâche</a>
+      </p>
+    `;
+
+    await sendEmail({
+      to: data.to,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error sending task assignment email:', error);
     throw error;
   }
 }
