@@ -107,3 +107,11 @@ jspm_packages/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Nginx configuration (use server nginx in production)
+nginx.conf
+
+# Docker compose files (use server-specific configs)
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.prod.yml
