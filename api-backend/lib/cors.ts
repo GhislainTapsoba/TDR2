@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const ALLOWED_ORIGINS = [
     'http://localhost:3001',
     'http://localhost:3000',
-    'https://teamproject.deep-technologies.com',
+    'http://172.238.111.152:3001',
     process.env.NEXT_PUBLIC_FRONTEND_URL,
 ].filter(Boolean);
 

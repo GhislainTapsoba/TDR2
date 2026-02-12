@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://teamproject.deep-technologies.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://172.238.111.152:3000/api';
 
 // Create axios instance
 const api = axios.create({
