@@ -109,5 +109,5 @@ jspm_packages/
 .vscode-test
 
 # Nginx configuration (use server nginx in production)
-#nginx.conf
+nginx.conf
 
