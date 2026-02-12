@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   # PostgreSQL Database
   postgres:
@@ -82,8 +84,6 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: documents
-    ports:
-      - "3000:3000"
     expose:
       - "3000"
     networks:
@@ -124,22 +124,6 @@ services:
     restart: unless-stopped
     depends_on:
       - api-backend
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "127.0.0.1:8080:80"
-      - "127.0.0.1:443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - app-network
-    restart: unless-stopped
-    depends_on:
-      web-frontend:
-        condition: service_started
-      api-backend:
-        condition: service_started
 
 networks:
   app-network:
