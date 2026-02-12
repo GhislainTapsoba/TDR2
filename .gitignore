@@ -111,7 +111,3 @@ jspm_packages/
 # Nginx configuration (use server nginx in production)
 nginx.conf
 
-# Docker compose files (use server-specific configs)
-docker-compose.yml
-docker-compose.override.yml
-docker-compose.prod.yml
