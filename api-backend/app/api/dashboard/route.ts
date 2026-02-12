@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
             [user.id]
         );
 
-        // Get unread notifications count
+        // Get unread notifications count (all notifications are considered unread for now)
         const { rows: notificationsRows } = await db.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
+            'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1',
             [user.id]
         );
 
