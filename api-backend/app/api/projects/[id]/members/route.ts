@@ -27,7 +27,7 @@ export async function GET(
         pm.id,
         pm.project_id,
         pm.user_id,
-        pm.role,
+        pm.role_id,
         pm.joined_at,
         u.name as user_name,
         u.email as user_email
@@ -82,14 +82,14 @@ export async function POST(
         }
 
         // Add multiple members
-        const values = member_ids.map((memberId: string, index: number) => 
-            `($1, $${index + 2}, 'member', NOW(), NOW())`
+        const values = member_ids.map((memberId: string, index: number) =>
+            `($1, $${index + 2}, NULL, NOW())`
         ).join(', ');
-        
+
         const queryParams = [projectId, ...member_ids];
 
         const result = await db.query(
-            `INSERT INTO project_members (project_id, user_id, role, created_at, updated_at)
+            `INSERT INTO project_members (project_id, user_id, role_id, joined_at)
              VALUES ${values}
              ON CONFLICT (project_id, user_id) DO NOTHING
              RETURNING *`,

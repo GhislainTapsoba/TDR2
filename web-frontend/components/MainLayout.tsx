@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from './Sidebar';
+import { canAccessPage } from '@/lib/permissions';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -39,6 +40,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (!isLoading && !user && !noSidebarPages.includes(pathname)) {
     router.push('/login');
     return null;
+  }
+
+  // Check page access permissions
+  if (!isLoading && user && showSidebar && !canAccessPage(user.role as any, pathname)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Accès non autorisé</h1>
+          <p className="text-gray-600 mb-6">Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retour au tableau de bord
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
