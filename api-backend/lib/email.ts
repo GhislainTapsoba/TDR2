@@ -1,4 +1,5 @@
 import Mailjet from 'node-mailjet';
+import twilio from 'twilio';
 import { db } from './db';
 
 let mailjet: Mailjet | null = null;
@@ -22,8 +23,19 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
 const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
-const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v17.0/YOUR_PHONE_NUMBER_ID';
-const WHATSAPP_API_TOKEN = process.env.WHATSAPP_API_TOKEN || '';
+
+// Client Twilio pour WhatsApp
+let twilioClient: twilio.Twilio | null = null;
+
+function getTwilioClient() {
+  if (!twilioClient) {
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+      throw new Error('TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN are required for WhatsApp');
+    }
+    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+  }
+  return twilioClient;
+}
 
 interface EmailOptions {
   to: string;
@@ -166,7 +178,7 @@ export async function sendSMS(options: SMSOptions): Promise<void> {
 export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
   try {
     // En mode développement/test, simuler l'envoi WhatsApp
-    if (process.env.NODE_ENV !== 'production' || WHATSAPP_API_TOKEN === 'your_whatsapp_api_token') {
+    if (process.env.NODE_ENV !== 'production' || TWILIO_ACCOUNT_SID === 'your_twilio_account_sid') {
       console.log('💬 WHATSAPP SIMULÉ (Mode Test):');
       console.log('To:', options.to);
       console.log('Message:', options.message);
@@ -181,41 +193,25 @@ export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
       return;
     }
 
-    const response = await fetch(WHATSAPP_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${WHATSAPP_API_TOKEN}`,
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: options.to.replace('+', ''), // Remove + if present
-        type: 'template',
-        template: {
-          name: 'reminder_template',
-          language: {
-            policy: 'deterministic',
-            code: 'fr'
-          },
-          components: [
-            {
-              type: 'body',
-              text: options.message
-            }
-          ]
-        }
-      }),
+    // Utiliser Twilio pour WhatsApp
+    const client = getTwilioClient();
+    if (!client) {
+      throw new Error('Failed to initialize Twilio client');
+    }
+
+    const message = await client.messages.create({
+      from: TWILIO_WHATSAPP_NUMBER,
+      to: `whatsapp:+${options.to.replace(/^\+/, '')}`, // S'assurer du format whatsapp:+...
+      body: options.message
     });
 
-    if (!response.ok) {
-      throw new Error(`WhatsApp error: ${response.statusText}`);
-    }
+    console.log('WhatsApp message SID:', message.sid);
 
     // Log WhatsApp dans la base de données
     await db.query(
-      `INSERT INTO whatsapp_logs (recipient, message, sent_at, status)
-         VALUES ($1, $2, NOW(), 'sent')`,
-      [options.to, options.message]
+      `INSERT INTO whatsapp_logs (recipient, message, sent_at, status, message_sid)
+         VALUES ($1, $2, NOW(), 'sent', $3)`,
+      [options.to, options.message, message.sid]
     );
 
     console.log('WhatsApp sent successfully to:', options.to);
