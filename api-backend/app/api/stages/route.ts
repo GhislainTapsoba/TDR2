@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
-import { mapDbRoleToUserRole, requirePermission } from '@/lib/permissions';
+import { mapDbRoleToUserRole, requirePermission, canManageProject } from '@/lib/permissions';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -96,6 +96,20 @@ export async function POST(request: NextRequest) {
                 request,
                 { status: 400 }
             );
+        }
+
+        // Check if project exists and user can manage it
+        const { rows: projectRows } = await db.query(
+            'SELECT manager_id FROM projects WHERE id = $1',
+            [project_id]
+        );
+
+        if (projectRows.length === 0) {
+            return corsResponse({ error: 'Projet introuvable' }, request, { status: 404 });
+        }
+
+        if (!canManageProject(userRole, user.id, projectRows[0].manager_id)) {
+            return corsResponse({ error: 'Permission refusée pour ce projet' }, request, { status: 403 });
         }
 
         // Insert stage

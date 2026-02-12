@@ -23,7 +23,7 @@ export async function GET(
         const { id } = await params;
 
         const { rows } = await db.query(
-            `SELECT t.*, p.title as project_title, s.name as stage_name, c.name as created_by_name,
+            `SELECT t.*, p.title as project_title, s.name as stage_name, c.name as created_by_name, p.manager_id,
               (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email))
                FROM task_assignees ta
                JOIN users u ON ta.user_id = u.id
@@ -38,6 +38,25 @@ export async function GET(
 
         if (rows.length === 0) {
             return corsResponse({ error: 'Tâche introuvable' }, request, { status: 404 });
+        }
+
+        const task = rows[0];
+        const userRole = mapDbRoleToUserRole(user.role);
+
+        // Check permissions: admin can see all tasks, others must be manager or member of the project
+        if (userRole !== 'admin') {
+            // Check if user is the project manager
+            if (task.manager_id !== user.id) {
+                // Check if user is a member of the project
+                const { rows: memberRows } = await db.query(
+                    'SELECT user_id FROM project_members WHERE project_id = $1 AND user_id = $2',
+                    [task.project_id, user.id]
+                );
+
+                if (memberRows.length === 0) {
+                    return corsResponse({ error: 'Accès non autorisé à cette tâche' }, request, { status: 403 });
+                }
+            }
         }
 
         return corsResponse(rows[0], request);

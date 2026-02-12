@@ -15,7 +15,7 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        
+
         // Handle "new" project case
         if (id === 'new') {
             return corsResponse({
@@ -54,6 +54,23 @@ export async function GET(
         }
 
         const project = rows[0];
+        const userRole = mapDbRoleToUserRole(user.role);
+
+        // Check permissions: admin can see all projects, others must be manager or member
+        if (userRole !== 'admin') {
+            // Check if user is the manager
+            if (project.manager_id !== user.id) {
+                // Check if user is a member of the project
+                const { rows: memberRows } = await db.query(
+                    'SELECT user_id FROM project_members WHERE project_id = $1 AND user_id = $2',
+                    [id, user.id]
+                );
+
+                if (memberRows.length === 0) {
+                    return corsResponse({ error: 'Accès non autorisé à ce projet' }, request, { status: 403 });
+                }
+            }
+        }
 
         return corsResponse({
             ...project,
