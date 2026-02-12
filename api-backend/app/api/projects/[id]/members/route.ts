@@ -21,20 +21,25 @@ export async function GET(
         const paramsResolved = await params;
         const projectId = paramsResolved.id;
 
-        // Get project members with user details
+        // Get all users with their project membership status
         const result = await db.query(
             `SELECT 
-        pm.id,
-        pm.project_id,
-        pm.user_id,
-        pm.role_id,
-        pm.joined_at,
+        u.id as user_id,
         u.name as user_name,
-        u.email as user_email
-      FROM project_members pm
-      JOIN users u ON pm.user_id = u.id
-      WHERE pm.project_id = $1
-      ORDER BY pm.joined_at DESC`,
+        u.email as user_email,
+        u.role as user_role,
+        CASE 
+            WHEN pm.user_id IS NOT NULL THEN true 
+            ELSE false 
+        END as is_assigned,
+        pm.joined_at,
+        pm.role_id
+      FROM users u
+      LEFT JOIN project_members pm ON u.id = pm.user_id AND pm.project_id = $1
+      WHERE u.is_active = true
+      ORDER BY 
+        CASE WHEN pm.user_id IS NOT NULL THEN 0 ELSE 1 END,
+        u.name ASC`,
             [projectId]
         );
 
