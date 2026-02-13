@@ -310,24 +310,14 @@ export default function StageDetailPage() {
                                             </span>
                                             <span className={`px-2 py-1 text-xs rounded-full ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
                                                 task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                                    task.status === 'TODO' ? 'bg-gray-100 text-gray-800' :
-                                                        task.status === 'IN_REVIEW' ? 'bg-purple-100 text-purple-800' :
-                                                            'bg-gray-100 text-gray-800'
+                                                    task.status === 'IN_REVIEW' ? 'bg-purple-100 text-purple-800' :
+                                                        task.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                                                 }`}>
                                                 {task.status === 'TODO' ? 'À faire' :
                                                     task.status === 'IN_PROGRESS' ? 'En cours' :
                                                         task.status === 'IN_REVIEW' ? 'En révision' :
                                                             task.status === 'COMPLETED' ? 'Terminé' : task.status}
                                             </span>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    window.location.href = `/tasks/${task.id}`;
-                                                }}
-                                                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                                            >
-                                                Voir les détails
-                                            </button>
                                         </div>
                                     </div>
                                 </Link>

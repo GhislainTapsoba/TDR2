@@ -223,6 +223,31 @@ export default function TasksPage() {
                                 )}
                             </div>
 
+                            {/* Progress Bar */}
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-medium text-gray-700">Progression</span>
+                                    <span className="text-xs font-medium text-gray-700">
+                                        {task.status === 'COMPLETED' ? '100%' :
+                                            task.status === 'IN_PROGRESS' ? '50%' :
+                                                task.status === 'TODO' ? '0%' : '25%'}
+                                    </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                        className={`h-2 rounded-full ${task.status === 'COMPLETED' ? 'bg-green-500' :
+                                                task.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                                                    task.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
+                                            }`}
+                                        style={{
+                                            width: task.status === 'COMPLETED' ? '100%' :
+                                                task.status === 'IN_PROGRESS' ? '50%' :
+                                                    task.status === 'TODO' ? '0%' : '25%'
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
                             <div className="flex justify-between items-center">
                                 <Link
                                     href={`/tasks/${task.id}`}

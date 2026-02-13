@@ -137,6 +137,31 @@ export default function StagesPage() {
                                 <p>Créé le: <span className="font-medium text-gray-700">{new Date(stage.created_at).toLocaleDateString()}</span></p>
                             </div>
 
+                            {/* Progress Bar */}
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-medium text-gray-700">Progression</span>
+                                    <span className="text-xs font-medium text-gray-700">
+                                        {stage.status === 'COMPLETED' ? '100%' :
+                                            stage.status === 'IN_PROGRESS' ? '50%' :
+                                                stage.status === 'TODO' ? '0%' : '25%'}
+                                    </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                        className={`h-2 rounded-full ${stage.status === 'COMPLETED' ? 'bg-green-500' :
+                                                stage.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                                                    stage.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
+                                            }`}
+                                        style={{
+                                            width: stage.status === 'COMPLETED' ? '100%' :
+                                                stage.status === 'IN_PROGRESS' ? '50%' :
+                                                    stage.status === 'TODO' ? '0%' : '25%'
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                                 <span className="text-xs text-gray-500">
                                     ID: {stage.id}

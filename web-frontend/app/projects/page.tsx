@@ -231,6 +231,31 @@ export default function ProjectsPage() {
                                 )}
                             </div>
 
+                            {/* Progress Bar */}
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-medium text-gray-700">Progression</span>
+                                    <span className="text-xs font-medium text-gray-700">
+                                        {project.status === 'COMPLETED' ? '100%' :
+                                            project.status === 'IN_PROGRESS' ? '50%' :
+                                                project.status === 'PLANNING' ? '0%' : '25%'}
+                                    </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                        className={`h-2 rounded-full ${project.status === 'COMPLETED' ? 'bg-green-500' :
+                                            project.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                                                project.status === 'PLANNING' ? 'bg-gray-400' : 'bg-orange-500'
+                                            }`}
+                                        style={{
+                                            width: project.status === 'COMPLETED' ? '100%' :
+                                                project.status === 'IN_PROGRESS' ? '50%' :
+                                                    project.status === 'PLANNING' ? '0%' : '25%'
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                                 <Link
                                     href={`/projects/${project.id}`}

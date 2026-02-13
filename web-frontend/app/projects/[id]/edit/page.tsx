@@ -332,7 +332,7 @@ export default function EditProjectPage() {
                     <div className="bg-white rounded-lg shadow p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">Progression</h3>
                         <div className="w-full bg-gray-200 rounded-full h-4">
-                            <div 
+                            <div
                                 className="bg-blue-600 h-4 rounded-full flex items-center justify-center text-white text-sm font-medium"
                                 style={{ width: `${(stages.filter(s => s.status === 'COMPLETED').length / Math.max(stages.length, 1)) * 100}%` }}
                             >
