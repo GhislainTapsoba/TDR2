@@ -294,8 +294,8 @@ export default function StageDetailPage() {
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <h3 className="font-semibold">{task.title}</h3>
-                                            {task.assigned_to_name && (
-                                                <p className="text-xs text-gray-500 mt-1">Assigné à: {task.assigned_to_name}</p>
+                                            {task.assignees && task.assignees.length > 0 && (
+                                                <p className="text-xs text-gray-500 mt-1">Assigné à: {task.assignees.map(a => a.name).join(', ')}</p>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
