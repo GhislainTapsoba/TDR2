@@ -19,7 +19,15 @@ interface Project {
     title: string;
     status: string;
     due_date?: string;
-    manager_name?: string;
+    manager?: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    created_by?: {
+        id: string;
+        name: string;
+    };
 }
 
 interface Task {
@@ -228,7 +236,7 @@ export default function DashboardPage() {
                                 <div key={project.id} className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-900 truncate">{project.title}</p>
-                                        <p className="text-xs text-gray-500">{project.manager_name || 'Non assigné'}</p>
+                                        <p className="text-xs text-gray-500">{project.manager?.name || 'Non assigné'}</p>
                                     </div>
                                     <div className="flex items-center space-x-2 ml-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
