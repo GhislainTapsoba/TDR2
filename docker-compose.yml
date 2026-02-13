@@ -72,6 +72,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: 0.0.0.0 # ✅ AJOUTÉ : Force Next.js à écouter sur toutes les interfaces
       DATABASE_URL: postgresql://${POSTGRES_USER:-deep-user}:${POSTGRES_PASSWORD:-deep-projet}@postgres:5432/${POSTGRES_DB:-deep-db}
       JWT_SECRET: ${JWT_SECRET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -93,7 +94,8 @@ services:
       app-network:
         ipv4_address: 172.19.0.4
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || curl -f http://127.0.0.1:3000/api/health" ]
+      # ✅ MODIFIÉ : Utilise wget avec localhost (fonctionnera avec HOSTNAME=0.0.0.0)
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -117,6 +119,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      HOSTNAME: 0.0.0.0 # ✅ AJOUTÉ : Bonne pratique pour le frontend aussi
       NEXT_PUBLIC_API_URL: https://teamproject.deep-technologies.com/api
       INTERNAL_API_URL: http://127.0.0.1:3000/api
       NEXTAUTH_URL: https://teamproject.deep-technologies.com
