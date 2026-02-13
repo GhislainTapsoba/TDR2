@@ -167,15 +167,17 @@ export default function ProjectsPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Projets</h1>
                         <p className="text-gray-600 mt-1">Gérez tous vos projets</p>
                     </div>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Nouveau projet
-                    </button>
+                    {(user?.role === 'admin' || user?.role === 'manager') && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Nouveau projet
+                        </button>
+                    )}
                 </div>
 
                 {/* Search and Filters */}
@@ -236,12 +238,14 @@ export default function ProjectsPage() {
                                 >
                                     Voir détails →
                                 </Link>
-                                <button
-                                    onClick={() => handleDeleteProject(project.id)}
-                                    className="text-red-600 hover:text-red-800 text-sm"
-                                >
-                                    Supprimer
-                                </button>
+                                {(user?.role === 'admin' || user?.role === 'manager') && (
+                                    <button
+                                        onClick={() => handleDeleteProject(project.id)}
+                                        className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                        Supprimer
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

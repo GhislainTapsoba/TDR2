@@ -230,12 +230,14 @@ export default function TasksPage() {
                                 >
                                     Voir détails
                                 </Link>
-                                <button
-                                    onClick={() => handleDeleteTask(task.id)}
-                                    className="text-red-600 hover:text-red-800"
-                                >
-                                    Supprimer
-                                </button>
+                                {(user?.role === 'admin' || user?.role === 'manager' || (user?.role === 'employee' && task.assigned_to === user.id)) && (
+                                    <button
+                                        onClick={() => handleDeleteTask(task.id)}
+                                        className="text-red-600 hover:text-red-800"
+                                    >
+                                        Supprimer
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

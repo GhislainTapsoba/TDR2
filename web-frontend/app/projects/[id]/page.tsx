@@ -91,7 +91,7 @@ export default function ProjectDetailPage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div>
                             <span className="text-gray-500">Manager:</span>
-                            <span className="ml-2 font-medium">{project.manager_name || 'Non assigné'}</span>
+                            <span className="ml-2 font-medium">{project.manager?.name || 'Non assigné'}</span>
                         </div>
                         <div>
                             <span className="text-gray-500">Début:</span>
