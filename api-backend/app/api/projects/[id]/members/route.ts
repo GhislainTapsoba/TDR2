@@ -43,7 +43,7 @@ export async function GET(
             [projectId]
         );
 
-        return corsResponse({ data: result.rows }, request);
+        return corsResponse(result.rows, request);
     } catch (error: any) {
         console.error('Error fetching project members:', error);
         return corsResponse({ error: error.message }, request, { status: 500 });

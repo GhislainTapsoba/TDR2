@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { tasksAPI, projectsAPI } from '@/lib/api';
+import { tasksAPI, projectsAPI, usersAPI } from '@/lib/api';
 import BackButton from '@/components/BackButton';
 
 interface Task {
@@ -21,6 +21,13 @@ interface Task {
     created_at: string;
 }
 
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
 interface Project {
     id: string;
     title: string;
@@ -30,6 +37,7 @@ export default function TasksPage() {
     const { user } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,6 +47,7 @@ export default function TasksPage() {
         priority: 'MEDIUM',
         project_id: '',
         due_date: '',
+        assignee_ids: [] as string[],
     });
 
     useEffect(() => {
@@ -50,12 +59,14 @@ export default function TasksPage() {
     const loadData = async () => {
         try {
             const params = filter ? { status: filter } : {};
-            const [tasksResponse, projectsResponse] = await Promise.all([
+            const [tasksResponse, projectsResponse, usersResponse] = await Promise.all([
                 tasksAPI.getAll(params),
-                projectsAPI.getAll()
+                projectsAPI.getAll(),
+                usersAPI.getAll()
             ]);
             setTasks(tasksResponse.data);
             setProjects(projectsResponse.data);
+            setUsers(usersResponse.data);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -74,6 +85,7 @@ export default function TasksPage() {
                 priority: 'MEDIUM',
                 project_id: '',
                 due_date: '',
+                assignee_ids: [],
             });
             loadData();
         } catch (error) {
@@ -194,7 +206,7 @@ export default function TasksPage() {
                                     </span>
                                 </div>
                             </div>
-                            
+
                             <p className="text-gray-600 mb-4 line-clamp-2">
                                 {task.description || 'Aucune description'}
                             </p>
@@ -292,6 +304,30 @@ export default function TasksPage() {
                                         <option value="HIGH">Haute</option>
                                         <option value="URGENT">Urgente</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Assigné à
+                                    </label>
+                                    <select
+                                        multiple
+                                        value={formData.assignee_ids}
+                                        onChange={(e) => {
+                                            const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                                            setFormData({ ...formData, assignee_ids: selectedOptions });
+                                        }}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        size={4}
+                                    >
+                                        {users.filter(user => user.role !== 'admin').map((user) => (
+                                            <option key={user.id} value={user.id}>
+                                                {user.name || user.email}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs
+                                    </p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
