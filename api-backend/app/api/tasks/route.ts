@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const project_id = searchParams.get('project_id');
+        const assigned_to_me = searchParams.get('assigned_to_me');
 
         // Handle "new" project case - return empty tasks list
         if (project_id === 'new') {
@@ -62,6 +63,14 @@ export async function GET(request: NextRequest) {
         if (project_id) {
             whereClauses.push(`t.project_id = $${params.length + 1}`);
             params.push(project_id);
+        }
+
+        // Filter by assigned_to_me
+        if (assigned_to_me === 'true') {
+            whereClauses.push(`EXISTS (
+                SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id AND ta.user_id = $${params.length + 1}
+            )`);
+            params.push(user.id);
         }
 
         if (whereClauses.length > 0) {
