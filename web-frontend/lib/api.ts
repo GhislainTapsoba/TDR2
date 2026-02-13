@@ -145,6 +145,11 @@ export const dashboardAPI = {
     getStats: () => api.get('/dashboard'),
 };
 
+// Activities API
+export const activitiesAPI = {
+    getAll: () => api.get('/activities'),
+};
+
 // Roles API
 export const rolesAPI = {
     getAll: () => api.get('/roles'),
