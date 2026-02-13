@@ -31,11 +31,21 @@ interface Task {
     due_date?: string;
 }
 
+interface ProjectMember {
+    id: string;
+    user_name: string;
+    user_email: string;
+    role?: string;
+    project_id: string;
+    project_title: string;
+}
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -54,6 +64,29 @@ export default function DashboardPage() {
             setStats(statsRes.data);
             setProjects(projectsRes.data);
             setTasks(tasksRes.data);
+
+            // Load members for recent projects
+            const membersPromises = projectsRes.data.map(async (project: Project) => {
+                try {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${project.id}/members`, {
+                        headers: {
+                            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+                        },
+                    });
+                    const membersData = await response.json();
+                    return membersData.data || [];
+                } catch (error) {
+                    console.error(`Error loading members for project ${project.id}:`, error);
+                    return [];
+                }
+            });
+
+            const allMembers = await Promise.all(membersPromises);
+            const flattenedMembers = allMembers.flat().map((member: any) => ({
+                ...member,
+                project_title: projectsRes.data.find((p: Project) => p.id === member.project_id)?.title || 'Projet inconnu'
+            }));
+            setProjectMembers(flattenedMembers);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -178,7 +211,7 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                 {/* Recent Projects */}
                 <div className="bg-white rounded-lg border border-gray-200">
                     <div className="p-6 border-b border-gray-200">
@@ -258,6 +291,48 @@ export default function DashboardPage() {
                                 Voir toutes les tâches →
                             </Link>
                         </div>
+                    </div>
+                </div>
+
+                {/* Project Members */}
+                <div className="bg-white rounded-lg border border-gray-200">
+                    <div className="p-6 border-b border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-900">Membres des projets</h2>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-4">
+                            {projectMembers.slice(0, 5).map((member) => (
+                                <div key={`${member.project_id}-${member.user_id}`} className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{member.user_name || 'Utilisateur'}</p>
+                                        <p className="text-xs text-gray-500 truncate">{member.project_title}</p>
+                                    </div>
+                                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-full flex-shrink-0">
+                                        {member.role || 'Membre'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        {projectMembers.length === 0 && (
+                            <div className="text-center py-8">
+                                <p className="text-gray-500 text-sm">Aucun membre trouvé</p>
+                            </div>
+                        )}
+                        {projectMembers.length > 5 && (
+                            <div className="mt-6 pt-4 border-t border-gray-200">
+                                <Link
+                                    href="/projects"
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                    Voir tous les membres →
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
