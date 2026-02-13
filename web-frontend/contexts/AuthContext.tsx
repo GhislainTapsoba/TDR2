@@ -28,9 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Load user from localStorage on mount
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        // Load user from sessionStorage on mount
+        const storedToken = sessionStorage.getItem('token');
+        const storedUser = sessionStorage.getItem('user');
 
         if (storedToken && storedUser) {
             setToken(storedToken);
@@ -44,8 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await authAPI.login(email, password);
         const { token, user } = response.data;
 
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('user', JSON.stringify(user));
 
         setToken(token);
         setUser(user);
@@ -55,16 +55,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await authAPI.register(email, name, password, phone);
         const { token, user } = response.data;
 
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('user', JSON.stringify(user));
 
         setToken(token);
         setUser(user);
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         setToken(null);
         setUser(null);
     };
