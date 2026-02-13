@@ -319,6 +319,15 @@ export default function StageDetailPage() {
                                                         task.status === 'IN_REVIEW' ? 'En révision' :
                                                             task.status === 'COMPLETED' ? 'Terminé' : task.status}
                                             </span>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    window.location.href = `/tasks/${task.id}`;
+                                                }}
+                                                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                            >
+                                                Voir les détails
+                                            </button>
                                         </div>
                                     </div>
                                 </Link>

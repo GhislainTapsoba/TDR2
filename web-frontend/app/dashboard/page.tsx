@@ -80,13 +80,8 @@ export default function DashboardPage() {
             // Load members for recent projects
             const membersPromises = projectsRes.data.map(async (project: Project) => {
                 try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${project.id}/members`, {
-                        headers: {
-                            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-                        },
-                    });
-                    const membersData = await response.json();
-                    return membersData.data || [];
+                    const response = await projectsAPI.getMembers(project.id);
+                    return response.data || [];
                 } catch (error) {
                     console.error(`Error loading members for project ${project.id}:`, error);
                     return [];

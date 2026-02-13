@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { stagesAPI } from '@/lib/api';
 import BackButton from '@/components/BackButton';
@@ -140,6 +141,12 @@ export default function StagesPage() {
                                 <span className="text-xs text-gray-500">
                                     ID: {stage.id}
                                 </span>
+                                <Link
+                                    href={`/stages/${stage.id}`}
+                                    className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    Voir les détails
+                                </Link>
                             </div>
                         </div>
                     </div>
