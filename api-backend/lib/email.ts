@@ -1,6 +1,7 @@
 import Mailjet from 'node-mailjet';
 import twilio from 'twilio';
 import { db } from './db';
+import { createEmailLog } from './activity-logger';
 
 let mailjet: Mailjet | null = null;
 
@@ -58,61 +59,46 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
     // En mode développement/test, simuler l'envoi d'email
     if (process.env.NODE_ENV !== 'production' || process.env.MAILJET_API_KEY === 'f1e2b7e5c4b0a0b5f8e4e3e5f8e4e3e5') {
-      console.log('📧 EMAIL SIMULÉ (Mode Test):');
-      console.log('To:', options.to);
-      console.log('Subject:', options.subject);
-      console.log('HTML:', options.html);
-
-      // Log email dans la base de données
-      await db.query(
-        `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
-         VALUES ($1, $2, $3, NOW(), 'sent')`,
-        [options.to, options.subject, options.html]
-      );
-
+      console.log('📧 Email simulé:', options.subject, '->', options.to);
       return;
     }
 
-    // En production, utiliser Mailjet
-    const request = getMailjet().post('send', { version: 'v3.1' }).request({
-      Messages: [
-        {
-          From: {
-            Email: process.env.MAIL_FROM_EMAIL || 'noreply@example.com',
-            Name: process.env.MAIL_FROM_NAME || 'TDR Projects',
+    const client = getMailjet();
+    const request = await client
+      .post('send', {
+        'Messages': [{
+          'From': {
+            'Email': 'noreply@tdr2.com',
+            'Name': 'TDR2'
           },
-          To: [
-            {
-              Email: options.to,
-            },
           ],
-          Subject: options.subject,
-          TextPart: options.text || '',
-          HTMLPart: options.html,
-        },
+        Subject: options.subject,
+        TextPart: options.text || '',
+        HTMLPart: options.html,
+      },
       ],
-    });
+  });
 
-    await request;
+  await request;
 
-    // Log email
-    await db.query(
-      `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
+  // Log email
+  await db.query(
+    `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
        VALUES ($1, $2, $3, NOW(), 'sent')`,
-      [options.to, options.subject, options.html]
-    );
-  } catch (error) {
-    console.error('Error sending email:', error);
+    [options.to, options.subject, options.html]
+  );
+} catch (error) {
+  console.error('Error sending email:', error);
 
-    // Log failed email
-    await db.query(
-      `INSERT INTO email_logs (recipient, subject, body, sent_at, status, error_message)
+  // Log failed email
+  await db.query(
+    `INSERT INTO email_logs (recipient, subject, body, sent_at, status, error_message)
        VALUES ($1, $2, $3, NOW(), 'failed', $4)`,
-      [options.to, options.subject, options.html, (error as Error).message]
-    );
+    [options.to, options.subject, options.html, (error as Error).message]
+  );
 
-    throw error;
-  }
+  throw error;
+}
 }
 
 export async function sendSMS(options: SMSOptions): Promise<void> {

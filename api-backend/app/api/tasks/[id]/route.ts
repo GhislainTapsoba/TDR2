@@ -251,6 +251,23 @@ export async function PUT(
     }
 }
 
+// Create activity log for task update helper function
+async function createTaskUpdateActivity(userId: string, taskId: string, changes: string) {
+    await db.query(
+        'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+        [
+            userId,
+            'updated',
+            'task',
+            taskId,
+            JSON.stringify({
+                description: `Tâche mise à jour: ${changes}`,
+                changes: changes
+            })
+        ]
+    );
+}
+
 // DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
     request: NextRequest,
@@ -284,7 +301,35 @@ export async function DELETE(
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 
+        // Get task details before deletion for activity log
+        const { rows: deletionTaskRows } = await db.query(
+            'SELECT title, project_id FROM tasks WHERE id = $1',
+            [id]
+        );
+
+        if (deletionTaskRows.length === 0) {
+            return corsResponse({ error: 'Tâche non trouvée' }, request, { status: 404 });
+        }
+
+        const taskToDelete = deletionTaskRows[0];
+
         await db.query('DELETE FROM tasks WHERE id = $1', [id]);
+
+        // Create activity log for task deletion
+        await db.query(
+            'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+            [
+                user.id,
+                'deleted',
+                'task',
+                id,
+                JSON.stringify({
+                    description: `Tâche "${taskToDelete.title}" supprimée`,
+                    task_title: taskToDelete.title,
+                    project_id: taskToDelete.project_id
+                })
+            ]
+        );
 
         return corsResponse({ message: 'Tâche supprimée avec succès' }, request);
     } catch (error) {

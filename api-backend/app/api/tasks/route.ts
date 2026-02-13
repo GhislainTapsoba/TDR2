@@ -139,6 +139,22 @@ export async function POST(request: NextRequest) {
 
         const task = taskRows[0];
 
+        // Create activity log for task creation
+        await db.query(
+            'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+            [
+                user.id,
+                'created',
+                'task',
+                task.id,
+                JSON.stringify({
+                    description: `Tâche "${task.title}" créée`,
+                    task_title: task.title,
+                    project_id: task.project_id
+                })
+            ]
+        );
+
         // Assign users and send emails
         if (assignee_ids && Array.isArray(assignee_ids) && assignee_ids.length > 0) {
             // Insert assignees

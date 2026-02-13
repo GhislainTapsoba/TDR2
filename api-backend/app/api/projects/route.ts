@@ -129,6 +129,21 @@ export async function POST(request: NextRequest) {
 
         const project = rows[0];
 
+        // Create activity log for project creation
+        await db.query(
+            'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+            [
+                user.id,
+                'created',
+                'project',
+                project.id,
+                JSON.stringify({
+                    description: `Projet "${project.title}" créé`,
+                    project_title: project.title
+                })
+            ]
+        );
+
         // Get manager info
         if (project.manager_id) {
             const { rows: managerRows } = await db.query(
