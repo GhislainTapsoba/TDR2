@@ -35,16 +35,12 @@ export default function ProjectDetailPage() {
                 projectsAPI.getById(params.id as string),
                 stagesAPI.getAll({ project_id: params.id }),
                 tasksAPI.getAll({ project_id: params.id }),
-                fetch(`${process.env.NODE_ENV === 'development' ? 'http://localhost:3000/api' : process.env.NEXT_PUBLIC_API_URL}/projects/${params.id}/members`, {
-                    headers: {
-                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-                    },
-                }).then(res => res.json()),
+                projectsAPI.getMembers(params.id as string),
             ]);
             setProject(projectRes.data);
             setStages(stagesRes.data);
             setTasks(tasksRes.data);
-            setMembers(membersRes.data?.filter((member: any) => member.is_assigned) || []);
+            setMembers(membersRes.data || []);
         } catch (error) {
             console.error('Error loading project:', error);
         } finally {
@@ -75,18 +71,26 @@ export default function ProjectDetailPage() {
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">{project.title}</h1>
                             <p className="text-gray-600">{project.description}</p>
                         </div>
-                        <span className={`px-3 py-1 text-sm rounded-full ${project.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                            project.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-800' :
-                                    project.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'
-                            }`}>
-                            {project.status === 'PLANNING' ? 'Planification' :
-                                project.status === 'IN_PROGRESS' ? 'En cours' :
-                                    project.status === 'ON_HOLD' ? 'En pause' :
-                                        project.status === 'COMPLETED' ? 'Terminé' :
-                                            project.status === 'CANCELLED' ? 'Annulé' : project.status}
-                        </span>
+                        <div className="flex gap-2">
+                            <span className={`px-3 py-1 text-sm rounded-full ${project.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                project.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                                    project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-800' :
+                                        project.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                            'bg-gray-100 text-gray-800'
+                                }`}>
+                                {project.status === 'PLANNING' ? 'Planification' :
+                                    project.status === 'IN_PROGRESS' ? 'En cours' :
+                                        project.status === 'ON_HOLD' ? 'En pause' :
+                                            project.status === 'COMPLETED' ? 'Terminé' :
+                                                project.status === 'CANCELLED' ? 'Annulé' : project.status}
+                            </span>
+                            <Link
+                                href={`/projects/${params.id}/edit`}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                Modifier
+                            </Link>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div>
@@ -149,15 +153,23 @@ export default function ProjectDetailPage() {
                                             <h3 className="font-semibold">{stage.name}</h3>
                                             <p className="text-sm text-gray-600">{stage.description || 'Aucune description'}</p>
                                         </div>
-                                        <span className={`px-2 py-1 text-xs rounded-full ${stage.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                            stage.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                                stage.status === 'BLOCKED' ? 'bg-red-100 text-red-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                            }`}>
-                                            {stage.status === 'COMPLETED' ? 'Terminé' :
-                                                stage.status === 'IN_PROGRESS' ? 'En cours' :
-                                                    stage.status === 'BLOCKED' ? 'Bloqué' : stage.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-1 text-xs rounded-full ${stage.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                stage.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                                                    stage.status === 'BLOCKED' ? 'bg-red-100 text-red-800' :
+                                                        'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                {stage.status === 'COMPLETED' ? 'Terminé' :
+                                                    stage.status === 'IN_PROGRESS' ? 'En cours' :
+                                                        stage.status === 'BLOCKED' ? 'Bloqué' : stage.status}
+                                            </span>
+                                            <Link
+                                                href={`/stages/${stage.id}`}
+                                                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                                            >
+                                                Voir détails
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

@@ -8,6 +8,51 @@ export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
 }
 
+// GET /api/stages/[id] - Get a single stage
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
+        }
+
+        const { id } = await params;
+
+        const { rows } = await db.query(
+            `SELECT s.*, p.title as project_title, p.manager_id, p.id as project_id
+       FROM stages s
+       LEFT JOIN projects p ON s.project_id = p.id
+       WHERE s.id = $1`,
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return corsResponse({ error: 'Étape introuvable' }, request, { status: 404 });
+        }
+
+        const stage = rows[0];
+        const userRole = mapDbRoleToUserRole(user.role);
+
+        // Check permissions: admin can see all stages, others must be manager or member of project
+        if (userRole !== 'admin') {
+            const canManage = canManageProject(userRole, user.id, stage.manager_id);
+            const canWork = await canWorkOnProject(user.id, stage.project_id);
+
+            if (!canManage && !canWork) {
+                return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
+            }
+        }
+
+        return corsResponse(stage, request);
+    } catch (error) {
+        console.error('GET /api/stages/[id] error:', error);
+        return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });
+    }
+}
+
 // PUT /api/stages/[id] - Update a stage
 export async function PUT(
     request: NextRequest,
@@ -44,7 +89,7 @@ export async function PUT(
         // Check permissions
         const canManage = canManageProject(userRole, user.id, currentStage.manager_id);
         const canWork = await canWorkOnProject(user.id, currentStage.project_id);
-        
+
         if (!canManage && !canWork) {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
@@ -54,7 +99,7 @@ export async function PUT(
             const allowedFields = ['status'];
             const requestedFields = Object.keys(body);
             const hasInvalidFields = requestedFields.some(field => !allowedFields.includes(field));
-            
+
             if (hasInvalidFields) {
                 return corsResponse({ error: 'Les employés ne peuvent modifier que le statut des étapes' }, request, { status: 403 });
             }

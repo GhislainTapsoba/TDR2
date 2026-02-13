@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
-import { mapDbRoleToUserRole, requirePermission, canManageProject } from '@/lib/permissions';
+import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -66,9 +66,9 @@ export async function GET(
         const project = rows[0];
         const userRole = mapDbRoleToUserRole(user.role);
 
-        // Check permissions: admin can see all projects, others must be manager or member or have tasks assigned
+        // Check permissions: admin can see all projects, others must be manager or member of project or have tasks assigned
         if (userRole !== 'admin') {
-            // Check if user is the manager
+            // Check if user is a manager
             if (project.manager_id !== user.id) {
                 // Check if user is a member of the project
                 const { rows: memberRows } = await db.query(
@@ -82,7 +82,10 @@ export async function GET(
                     [id, user.id]
                 );
 
-                if (memberRows.length === 0 && taskAssigneeRows.length === 0) {
+                // Check if user can work on the project
+                const canWork = await canWorkOnProject(user.id, id);
+
+                if (memberRows.length === 0 && taskAssigneeRows.length === 0 && !canWork) {
                     return corsResponse({ error: 'Accès non autorisé à ce projet' }, request, { status: 403 });
                 }
             }
@@ -133,26 +136,35 @@ export async function PUT(
             return corsResponse({ error: 'Projet introuvable' }, request, { status: 404 });
         }
 
-        if (!canManageProject(userRole, user.id, projectRows[0].manager_id)) {
+        // Check if user can manage project or work on it (for employees)
+        const canManage = canManageProject(userRole, user.id, projectRows[0].manager_id);
+        const canWork = await canWorkOnProject(user.id, id);
+
+        if (!canManage && !canWork) {
             return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
         }
 
-        const { rows } = await db.query(
-            `UPDATE projects
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           start_date = COALESCE($3, start_date),
-           end_date = COALESCE($4, end_date),
-           due_date = COALESCE($5, due_date),
-           manager_id = COALESCE($6, manager_id),
-           status = COALESCE($7, status),
-           updated_at = NOW()
+        const updateProject = async () => {
+            const { rows } = await db.query(
+                `UPDATE projects
+           SET title = COALESCE($1, title),
+               description = COALESCE($2, description),
+               start_date = COALESCE($3, start_date),
+               end_date = COALESCE($4, end_date),
+               due_date = COALESCE($5, due_date),
+               manager_id = COALESCE($6, manager_id),
+               status = COALESCE($7, status),
+               updated_at = NOW()
        WHERE id = $8
        RETURNING *`,
-            [title, description, start_date, end_date, due_date, manager_id, status, id]
-        );
+                [title, description, start_date, end_date, due_date, manager_id, status, id]
+            );
+            return rows[0];
+        };
 
-        return corsResponse(rows[0], request);
+        const project = await updateProject();
+
+        return corsResponse(project, request);
     } catch (error) {
         console.error('PUT /api/projects/[id] error:', error);
         return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });

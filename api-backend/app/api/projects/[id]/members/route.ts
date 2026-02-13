@@ -35,10 +35,6 @@ export async function GET(
         u.name as user_name,
         u.email as user_email,
         u.role as user_role,
-        CASE 
-            WHEN pm.user_id IS NOT NULL THEN true 
-            ELSE false 
-        END as is_assigned,
         pm.joined_at,
         pm.role_id
       FROM users u

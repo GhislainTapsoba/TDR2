@@ -14,6 +14,14 @@ export default function TaskDetailPage() {
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
+    const [editing, setEditing] = useState(false);
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        status: '',
+        priority: '',
+        due_date: '',
+    });
 
     useEffect(() => {
         if (!isLoading && !user) {
@@ -35,10 +43,37 @@ export default function TaskDetailPage() {
             ]);
             setTask(taskRes.data);
             setComments(commentsRes.data);
+            setFormData({
+                title: taskRes.data.title || '',
+                description: taskRes.data.description || '',
+                status: taskRes.data.status || '',
+                priority: taskRes.data.priority || '',
+                due_date: taskRes.data.due_date || '',
+            });
         } catch (error) {
             console.error('Error loading task:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateTask = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await tasksAPI.update(params.id as string, formData);
+            setEditing(false);
+            loadTaskData();
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
+    };
+
+    const handleStatusChange = async (newStatus: string) => {
+        try {
+            await tasksAPI.update(params.id as string, { status: newStatus });
+            loadTaskData();
+        } catch (error) {
+            console.error('Error updating status:', error);
         }
     };
 
@@ -83,19 +118,24 @@ export default function TaskDetailPage() {
                             <p className="text-gray-600">{task.description}</p>
                         </div>
                         <div className="flex gap-2">
-                            <span className={`px-3 py-1 text-sm rounded-full ${task.priority === 'URGENT' ? 'bg-red-100 text-red-800' :
-                                    task.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
-                                        task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-gray-100 text-gray-800'
-                                }`}>
-                                {task.priority}
-                            </span>
-                            <span className={`px-3 py-1 text-sm rounded-full ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                    task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                        'bg-gray-100 text-gray-800'
-                                }`}>
-                                {task.status}
-                            </span>
+                            <button
+                                onClick={() => setEditing(!editing)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                {editing ? 'Annuler' : 'Modifier'}
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange('IN_PROGRESS')}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                En cours
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange('COMPLETED')}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                                Complété
+                            </button>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -123,6 +163,118 @@ export default function TaskDetailPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Edit Form */}
+                {editing && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Modifier la tâche</h2>
+                        <form onSubmit={handleUpdateTask}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Titre *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.title}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        rows={3}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Priorité
+                                    </label>
+                                    <select
+                                        value={formData.priority}
+                                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="LOW">Basse</option>
+                                        <option value="MEDIUM">Moyenne</option>
+                                        <option value="HIGH">Haute</option>
+                                        <option value="URGENT">Urgente</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Date d'échéance
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={formData.due_date}
+                                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditing(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* Quick Status Change */}
+                {!editing && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Changer le statut</h2>
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => handleStatusChange('TODO')}
+                                className={`px-4 py-2 rounded-lg ${task.status === 'TODO' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                                disabled={task.status === 'TODO'}
+                            >
+                                À faire
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange('IN_PROGRESS')}
+                                className={`px-4 py-2 rounded-lg ${task.status === 'IN_PROGRESS' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
+                                disabled={task.status === 'IN_PROGRESS'}
+                            >
+                                En cours
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange('IN_REVIEW')}
+                                className={`px-4 py-2 rounded-lg ${task.status === 'IN_REVIEW' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-800 hover:bg-purple-200'}`}
+                                disabled={task.status === 'IN_REVIEW'}
+                            >
+                                En révision
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange('COMPLETED')}
+                                className={`px-4 py-2 rounded-lg ${task.status === 'COMPLETED' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
+                                disabled={task.status === 'COMPLETED'}
+                            >
+                                Terminé
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Comments */}
                 <div className="bg-white rounded-lg shadow p-6">
