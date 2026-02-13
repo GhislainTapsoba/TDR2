@@ -43,7 +43,7 @@ export async function GET(
         const task = rows[0];
         const userRole = mapDbRoleToUserRole(user.role);
 
-        // Check permissions: admin can see all tasks, others must be manager or member of the project
+        // Check permissions: admin can see all tasks, others must be manager, member of the project, or assigned to the task
         if (userRole !== 'admin') {
             // Check if user is the project manager
             if (task.manager_id !== user.id) {
@@ -53,7 +53,13 @@ export async function GET(
                     [task.project_id, user.id]
                 );
 
-                if (memberRows.length === 0) {
+                // Check if user is assigned to this task
+                const { rows: assigneeRows } = await db.query(
+                    'SELECT user_id FROM task_assignees WHERE task_id = $1 AND user_id = $2',
+                    [id, user.id]
+                );
+
+                if (memberRows.length === 0 && assigneeRows.length === 0) {
                     return corsResponse({ error: 'Accès non autorisé à cette tâche' }, request, { status: 403 });
                 }
             }

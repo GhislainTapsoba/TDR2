@@ -48,7 +48,7 @@ export async function requirePermission(
         },
         manager: {
             users: ['read'],
-            projects: ['create', 'read', 'update'],
+            projects: ['create', 'read', 'update', 'delete'],
             stages: ['create', 'read', 'update', 'delete'],
             tasks: ['create', 'read', 'update', 'delete'],
             notifications: ['read', 'update', 'delete'],
