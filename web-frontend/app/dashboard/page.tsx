@@ -32,12 +32,16 @@ interface Task {
 }
 
 interface ProjectMember {
-    id: string;
+    user_id: string;
     user_name: string;
     user_email: string;
-    role?: string;
+    user_role?: string;
+    is_assigned: boolean;
+    joined_at?: string;
+    role_id?: string;
     project_id: string;
     project_title: string;
+    role?: string;
 }
 
 export default function DashboardPage() {
@@ -82,10 +86,12 @@ export default function DashboardPage() {
             });
 
             const allMembers = await Promise.all(membersPromises);
-            const flattenedMembers = allMembers.flat().map((member: any) => ({
-                ...member,
-                project_title: projectsRes.data.find((p: Project) => p.id === member.project_id)?.title || 'Projet inconnu'
-            }));
+            const flattenedMembers = allMembers.flat()
+                .filter((member: any) => member.is_assigned) // Only show assigned members
+                .map((member: any) => ({
+                    ...member,
+                    project_title: projectsRes.data.find((p: Project) => p.id === member.project_id)?.title || 'Projet inconnu'
+                }));
             setProjectMembers(flattenedMembers);
         } catch (error) {
             console.error('Error loading data:', error);
