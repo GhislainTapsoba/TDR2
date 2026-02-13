@@ -35,7 +35,7 @@ export default function ProjectDetailPage() {
                 projectsAPI.getById(params.id as string),
                 stagesAPI.getAll({ project_id: params.id }),
                 tasksAPI.getAll({ project_id: params.id }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${params.id}/members`, {
+                fetch(`${process.env.NODE_ENV === 'development' ? 'http://localhost:3000/api' : process.env.NEXT_PUBLIC_API_URL}/projects/${params.id}/members`, {
                     headers: {
                         'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                     },
@@ -44,7 +44,7 @@ export default function ProjectDetailPage() {
             setProject(projectRes.data);
             setStages(stagesRes.data);
             setTasks(tasksRes.data);
-            setMembers(membersRes.data || []);
+            setMembers(membersRes.data?.filter((member: any) => member.is_assigned) || []);
         } catch (error) {
             console.error('Error loading project:', error);
         } finally {
