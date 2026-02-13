@@ -56,7 +56,7 @@ export async function GET(
         const project = rows[0];
         const userRole = mapDbRoleToUserRole(user.role);
 
-        // Check permissions: admin can see all projects, others must be manager or member
+        // Check permissions: admin can see all projects, others must be manager or member or have tasks assigned
         if (userRole !== 'admin') {
             // Check if user is the manager
             if (project.manager_id !== user.id) {
@@ -66,7 +66,13 @@ export async function GET(
                     [id, user.id]
                 );
 
-                if (memberRows.length === 0) {
+                // Check if user has tasks assigned in this project
+                const { rows: taskAssigneeRows } = await db.query(
+                    'SELECT 1 FROM task_assignees ta JOIN tasks t ON ta.task_id = t.id WHERE t.project_id = $1 AND ta.user_id = $2 LIMIT 1',
+                    [id, user.id]
+                );
+
+                if (memberRows.length === 0 && taskAssigneeRows.length === 0) {
                     return corsResponse({ error: 'Accès non autorisé à ce projet' }, request, { status: 403 });
                 }
             }
