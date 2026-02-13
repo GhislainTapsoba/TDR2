@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
+import { createActivityLog } from '@/lib/activity-logger';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -123,6 +124,21 @@ export async function POST(request: NextRequest) {
        RETURNING *`,
             [name, description, position || 0, duration, project_id, user.id]
         );
+
+        const stage = rows[0];
+
+        // Create activity log for stage creation
+        await createActivityLog({
+            userId: user.id,
+            action: 'created',
+            entityType: 'stage',
+            entityId: stage.id,
+            description: `Étape "${stage.name}" créée`,
+            details: {
+                stage_name: stage.name,
+                project_id: stage.project_id
+            }
+        });
 
         return corsResponse(rows[0], request, { status: 201 });
     } catch (error) {

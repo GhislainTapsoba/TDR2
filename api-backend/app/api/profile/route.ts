@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
+import { createActivityLog } from '@/lib/activity-logger';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -68,7 +69,42 @@ export async function PUT(request: NextRequest) {
             [name, email, user.id]
         );
 
-        return corsResponse(rows[0], request);
+        const updatedUser = rows[0];
+
+        // Create activity log for profile update
+        const oldEmail = user.email;
+        const oldName = user.name;
+        const emailChanged = email && email !== oldEmail;
+        const nameChanged = name && name !== oldName;
+
+        if (emailChanged || nameChanged) {
+            let action = 'updated';
+            let description = `Profil utilisateur mis à jour`;
+
+            if (emailChanged && !nameChanged) {
+                description = `Email changé: ${oldEmail} → ${email}`;
+            } else if (!emailChanged && nameChanged) {
+                description = `Nom changé: ${oldName} → ${name}`;
+            } else if (emailChanged && nameChanged) {
+                description = `Profil mis à jour: nom et email modifiés`;
+            }
+
+            await createActivityLog({
+                userId: user.id,
+                action: action,
+                entityType: 'user',
+                entityId: user.id,
+                description: description,
+                details: {
+                    old_email: oldEmail,
+                    new_email: email,
+                    old_name: oldName,
+                    new_name: name
+                }
+            });
+        }
+
+        return corsResponse(updatedUser, request);
     } catch (error) {
         console.error('PUT /api/profile error:', error);
         return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });
