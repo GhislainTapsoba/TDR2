@@ -66,17 +66,17 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     const client = getMailjet();
     const request = await client
       .post('send', {
-        'Messages': [{
-          'From': {
-            'Email': process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
-            'Name': process.env.MAIL_FROM_NAME || 'Team Project'
+        Messages: [{
+          From: {
+            Email: process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
+            Name: process.env.MAIL_FROM_NAME || 'Team Project'
           },
-          'To': [{
-            'Email': options.to
+          To: [{
+            Email: options.to
           }],
-          'Subject': options.subject,
-          'TextPart': options.text || '',
-          'HTMLPart': options.html,
+          Subject: options.subject,
+          TextPart: options.text || '',
+          HTMLPart: options.html,
         }]
       })
       .request();
