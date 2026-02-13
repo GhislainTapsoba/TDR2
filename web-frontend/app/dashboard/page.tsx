@@ -87,7 +87,6 @@ export default function DashboardPage() {
 
             const allMembers = await Promise.all(membersPromises);
             const flattenedMembers = allMembers.flat()
-                .filter((member: any) => member.is_assigned) // Only show assigned members
                 .map((member: any) => ({
                     ...member,
                     project_title: projectsRes.data.find((p: Project) => p.id === member.project_id)?.title || 'Projet inconnu'

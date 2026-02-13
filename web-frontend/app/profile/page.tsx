@@ -13,10 +13,10 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({ name: '', email: '' });
-    const [passwordData, setPasswordData] = useState({ 
-        currentPassword: '', 
-        newPassword: '', 
-        confirmPassword: '' 
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
     });
     const [showPasswordForm, setShowPasswordForm] = useState(false);
 
@@ -63,7 +63,7 @@ export default function ProfilePage() {
 
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (passwordData.newPassword !== passwordData.confirmPassword) {
             alert('Les mots de passe ne correspondent pas');
             return;
@@ -79,7 +79,7 @@ export default function ProfilePage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                 },
                 body: JSON.stringify({
                     currentPassword: passwordData.currentPassword,
@@ -113,7 +113,7 @@ export default function ProfilePage() {
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header with back button */}
                 <BackButton className="mb-6" />
-                
+
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Mon Profil</h1>
 
                 <div className="bg-white rounded-lg shadow p-6 mb-6">

@@ -37,7 +37,7 @@ export default function ProjectDetailPage() {
                 tasksAPI.getAll({ project_id: params.id }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${params.id}/members`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                     },
                 }).then(res => res.json()),
             ]);
@@ -76,16 +76,16 @@ export default function ProjectDetailPage() {
                             <p className="text-gray-600">{project.description}</p>
                         </div>
                         <span className={`px-3 py-1 text-sm rounded-full ${project.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                project.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                    project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-800' :
-                                        project.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                                            'bg-gray-100 text-gray-800'
+                            project.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                                project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-800' :
+                                    project.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
                             }`}>
                             {project.status === 'PLANNING' ? 'Planification' :
-                             project.status === 'IN_PROGRESS' ? 'En cours' :
-                             project.status === 'ON_HOLD' ? 'En pause' :
-                             project.status === 'COMPLETED' ? 'Terminé' :
-                             project.status === 'CANCELLED' ? 'Annulé' : project.status}
+                                project.status === 'IN_PROGRESS' ? 'En cours' :
+                                    project.status === 'ON_HOLD' ? 'En pause' :
+                                        project.status === 'COMPLETED' ? 'Terminé' :
+                                            project.status === 'CANCELLED' ? 'Annulé' : project.status}
                         </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
@@ -150,13 +150,13 @@ export default function ProjectDetailPage() {
                                             <p className="text-sm text-gray-600">{stage.description || 'Aucune description'}</p>
                                         </div>
                                         <span className={`px-2 py-1 text-xs rounded-full ${stage.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                                stage.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                                                    stage.status === 'BLOCKED' ? 'bg-red-100 text-red-800' :
-                                                        'bg-gray-100 text-gray-800'
+                                            stage.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                                                stage.status === 'BLOCKED' ? 'bg-red-100 text-red-800' :
+                                                    'bg-gray-100 text-gray-800'
                                             }`}>
                                             {stage.status === 'COMPLETED' ? 'Terminé' :
-                                             stage.status === 'IN_PROGRESS' ? 'En cours' :
-                                             stage.status === 'BLOCKED' ? 'Bloqué' : stage.status}
+                                                stage.status === 'IN_PROGRESS' ? 'En cours' :
+                                                    stage.status === 'BLOCKED' ? 'Bloqué' : stage.status}
                                         </span>
                                     </div>
                                 </div>
@@ -188,24 +188,24 @@ export default function ProjectDetailPage() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className={`px-2 py-1 text-xs rounded-full ${task.priority === 'URGENT' ? 'bg-red-100 text-red-800' :
-                                                    task.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
-                                                        task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-green-100 text-green-800'
+                                                task.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                                                    task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-green-100 text-green-800'
                                                 }`}>
                                                 {task.priority === 'URGENT' ? 'Urgente' :
-                                                 task.priority === 'HIGH' ? 'Haute' :
-                                                 task.priority === 'MEDIUM' ? 'Moyenne' : 'Basse'}
+                                                    task.priority === 'HIGH' ? 'Haute' :
+                                                        task.priority === 'MEDIUM' ? 'Moyenne' : 'Basse'}
                                             </span>
                                             <span className={`px-2 py-1 text-xs rounded-full ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                                    task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                                                task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
                                                     task.status === 'TODO' ? 'bg-gray-100 text-gray-800' :
-                                                    task.status === 'IN_REVIEW' ? 'bg-purple-100 text-purple-800' :
-                                                        'bg-gray-100 text-gray-800'
+                                                        task.status === 'IN_REVIEW' ? 'bg-purple-100 text-purple-800' :
+                                                            'bg-gray-100 text-gray-800'
                                                 }`}>
                                                 {task.status === 'TODO' ? 'À faire' :
-                                                 task.status === 'IN_PROGRESS' ? 'En cours' :
-                                                 task.status === 'IN_REVIEW' ? 'En révision' :
-                                                 task.status === 'COMPLETED' ? 'Terminé' : task.status}
+                                                    task.status === 'IN_PROGRESS' ? 'En cours' :
+                                                        task.status === 'IN_REVIEW' ? 'En révision' :
+                                                            task.status === 'COMPLETED' ? 'Terminé' : task.status}
                                             </span>
                                         </div>
                                     </div>

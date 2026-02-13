@@ -66,7 +66,7 @@ export default function ProjectsPage() {
             const params: any = {};
             if (filter) params.status = filter;
             if (searchTerm) params.search = searchTerm;
-            
+
             const response = await projectsAPI.getAll(params);
             setProjects(response.data);
         } catch (error) {
@@ -82,19 +82,19 @@ export default function ProjectsPage() {
             // Create project first
             const projectResponse = await projectsAPI.create(formData);
             const projectId = projectResponse.data.id;
-            
+
             // Add members if any selected
             if (formData.members.length > 0) {
                 await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/members`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                     },
                     body: JSON.stringify({ member_ids: formData.members }),
                 });
             }
-            
+
             setShowCreateModal(false);
             setFormData({
                 title: '',
@@ -215,7 +215,7 @@ export default function ProjectsPage() {
                                     {getStatusLabel(project.status)}
                                 </span>
                             </div>
-                            
+
                             <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                                 {project.description || 'Aucune description'}
                             </p>

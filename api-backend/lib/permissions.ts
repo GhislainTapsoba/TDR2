@@ -96,6 +96,17 @@ export function canManageProject(userRole: UserRole, userId: string, projectMana
  * Check if a user can access a specific project
  */
 export async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
+    // First check if user is admin
+    const userResult = await db.query(
+        'SELECT role FROM users WHERE id = $1',
+        [userId]
+    );
+
+    if (userResult.rows.length > 0 && userResult.rows[0].role === 'admin') {
+        return true;
+    }
+
+    // For non-admin users, check project access
     const { rows } = await db.query(
         `SELECT 1 FROM projects p
      WHERE p.id = $1

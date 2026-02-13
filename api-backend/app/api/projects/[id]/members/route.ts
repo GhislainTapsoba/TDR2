@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { corsResponse, handleCorsOptions } from '@/lib/cors';
+import { canAccessProject } from '@/lib/permissions';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -20,6 +21,12 @@ export async function GET(
 
         const paramsResolved = await params;
         const projectId = paramsResolved.id;
+
+        // Check if user can access this project
+        const canAccess = await canAccessProject(user.id, projectId);
+        if (!canAccess) {
+            return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
+        }
 
         // Get all users with their project membership status
         const result = await db.query(
