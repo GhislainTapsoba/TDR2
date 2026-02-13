@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
-import { mapDbRoleToUserRole, requirePermission, canManageProject } from '@/lib/permissions';
+import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
 import { sendTaskAssignmentEmail, sendTaskUpdateEmail, createConfirmationToken } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
@@ -121,8 +121,12 @@ export async function POST(request: NextRequest) {
 
         const project = projectRows[0];
 
-        if (!canManageProject(userRole, user.id, project.manager_id)) {
-            return corsResponse({ error: 'Vous ne pouvez créer des tâches que sur vos projets' }, request, { status: 403 });
+        // Check if user can manage project or work on it (for employees)
+        const canManage = canManageProject(userRole, user.id, project.manager_id);
+        const canWork = await canWorkOnProject(user.id, project_id);
+
+        if (!canManage && !canWork) {
+            return corsResponse({ error: 'Vous ne pouvez créer des tâches que sur les projets où vous êtes membre' }, request, { status: 403 });
         }
 
         // Create task

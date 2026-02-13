@@ -60,7 +60,7 @@ export async function requirePermission(
         employee: {
             users: ['read'],
             projects: ['read'],
-            stages: ['read'],
+            stages: ['read', 'update'],
             tasks: ['read', 'update'],
             notifications: ['read', 'update', 'delete'],
             settings: ['read', 'update'],
@@ -93,6 +93,40 @@ export function canManageProject(userRole: UserRole, userId: string, projectMana
 }
 
 /**
+ * Check if a user can work on a specific project (for employees)
+ */
+export async function canWorkOnProject(userId: string, projectId: string): Promise<boolean> {
+    // For admins and managers, use existing logic
+    const userResult = await db.query(
+        'SELECT role FROM users WHERE id = $1',
+        [userId]
+    );
+
+    if (userResult.rows.length === 0) return false;
+
+    const userRole = mapDbRoleToUserRole(userResult.rows[0].role);
+
+    if (userRole === 'admin') return true;
+
+    // For managers, check if they manage this project
+    if (userRole === 'manager') {
+        const projectResult = await db.query(
+            'SELECT manager_id FROM projects WHERE id = $1',
+            [projectId]
+        );
+        return projectResult.rows.length > 0 && projectResult.rows[0].manager_id === userId;
+    }
+
+    // For employees, check if they are members of the project
+    const memberResult = await db.query(
+        'SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2',
+        [projectId, userId]
+    );
+
+    return memberResult.rows.length > 0;
+}
+
+/**
  * Check if a user can access a specific project
  */
 export async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
@@ -115,6 +149,10 @@ export async function canAccessProject(userId: string, projectId: string): Promi
               SELECT 1 FROM tasks t
               JOIN task_assignees ta ON t.id = ta.task_id
               WHERE t.project_id = p.id AND ta.user_id = $2
+            )
+            OR EXISTS (
+              SELECT 1 FROM project_members pm
+              WHERE pm.project_id = p.id AND pm.user_id = $2
             ))
      LIMIT 1`,
         [projectId, userId]

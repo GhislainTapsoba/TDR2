@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
-import { mapDbRoleToUserRole, requirePermission, canManageProject } from '@/lib/permissions';
+import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
 import { sendTaskUpdateEmail, createConfirmationToken } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
@@ -106,18 +106,30 @@ export async function PUT(
         const currentTask = taskRows[0];
 
         // Check permissions
-        if (!canManageProject(userRole, user.id, currentTask.manager_id)) {
-            // Employee can only update status of their own tasks
-            if (userRole === 'employee') {
-                const { rows: assigneeCheck } = await db.query(
-                    'SELECT 1 FROM task_assignees WHERE task_id = $1 AND user_id = $2',
-                    [id, user.id]
-                );
-                if (assigneeCheck.length === 0) {
-                    return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
-                }
-            } else {
+        const canManage = canManageProject(userRole, user.id, currentTask.manager_id);
+        const canWork = await canWorkOnProject(user.id, currentTask.project_id);
+
+        if (!canManage && !canWork) {
+            return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
+        }
+
+        // For employees, only allow status updates and only if they are assigned to the task
+        if (!canManage && userRole === 'employee') {
+            const { rows: assigneeCheck } = await db.query(
+                'SELECT 1 FROM task_assignees WHERE task_id = $1 AND user_id = $2',
+                [id, user.id]
+            );
+            if (assigneeCheck.length === 0) {
                 return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
+            }
+
+            // For employees, only allow status changes
+            const allowedFields = ['status'];
+            const requestedFields = Object.keys(body);
+            const hasInvalidFields = requestedFields.some(field => !allowedFields.includes(field));
+
+            if (hasInvalidFields) {
+                return corsResponse({ error: 'Les employés ne peuvent modifier que le statut des tâches' }, request, { status: 403 });
             }
         }
 
