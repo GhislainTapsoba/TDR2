@@ -36,7 +36,8 @@ export async function GET(
         u.email as user_email,
         u.role as user_role,
         pm.joined_at,
-        pm.role_id
+        pm.role_id,
+        $1 as project_id
       FROM users u
       LEFT JOIN project_members pm ON u.id = pm.user_id AND pm.project_id = $1
       WHERE u.is_active = true
