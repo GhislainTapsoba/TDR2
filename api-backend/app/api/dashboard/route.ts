@@ -52,12 +52,28 @@ export async function GET(request: NextRequest) {
         const { rows: tasksRows } = await db.query(tasksQuery, tasksParams);
 
         // Get completed tasks count
-        const { rows: completedTasksRows } = await db.query(
-            `SELECT COUNT(*) as count FROM tasks t
-       WHERE t.status = 'COMPLETED'
-       AND EXISTS (SELECT 1 FROM task_assignees WHERE task_id = t.id AND user_id = $1)`,
-            [user.id]
-        );
+        let completedTasksQuery = `
+            SELECT COUNT(*) as count FROM tasks t
+            WHERE t.status = 'COMPLETED'
+        `;
+        let completedTasksParams: any[] = [];
+
+        if (userRole !== 'admin') {
+            completedTasksQuery += `
+                AND (
+                    EXISTS (SELECT 1 FROM task_assignees WHERE task_id = t.id AND user_id = $1)
+                    OR t.created_by_id = $1
+                    OR EXISTS (
+                        SELECT 1 FROM projects p 
+                        WHERE p.id = t.project_id 
+                        AND (p.manager_id = $1 OR p.created_by_id = $1)
+                    )
+                )
+            `;
+            completedTasksParams = [user.id];
+        }
+
+        const { rows: completedTasksRows } = await db.query(completedTasksQuery, completedTasksParams);
 
         // Get total users count (only for admin)
         let totalUsers = 0;
