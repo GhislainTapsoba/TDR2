@@ -230,7 +230,7 @@ export default function TasksPage() {
                                 >
                                     Voir détails
                                 </Link>
-                                {(user?.role === 'admin' || user?.role === 'manager' || (user?.role === 'employee' && task.assigned_to === user.id)) && (
+                                {(user?.role === 'admin' || user?.role === 'manager' || (user?.role === 'employee' && task.assignees?.some((a: any) => a.id === user.id))) && (
                                     <button
                                         onClick={() => handleDeleteTask(task.id)}
                                         className="text-red-600 hover:text-red-800"
