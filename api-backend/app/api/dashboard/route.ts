@@ -29,6 +29,17 @@ export async function GET(request: NextRequest) {
 
         const { rows: projectsRows } = await db.query(projectsQuery, projectsParams);
 
+        // Get active projects count (projects not in 'COMPLETED' status)
+        let activeProjectsQuery = 'SELECT COUNT(*) as count FROM projects WHERE status != $1';
+        let activeProjectsParams: any[] = ['COMPLETED'];
+
+        if (userRole !== 'admin') {
+            activeProjectsQuery += ' AND (manager_id = $2 OR created_by_id = $2)';
+            activeProjectsParams = ['COMPLETED', user.id];
+        }
+
+        const { rows: activeProjectsRows } = await db.query(activeProjectsQuery, activeProjectsParams);
+
         // Get tasks count
         let tasksQuery = 'SELECT COUNT(*) as count FROM tasks';
         let tasksParams: any[] = [];
@@ -40,20 +51,6 @@ export async function GET(request: NextRequest) {
 
         const { rows: tasksRows } = await db.query(tasksQuery, tasksParams);
 
-        // Get my tasks count
-        const { rows: myTasksRows } = await db.query(
-            'SELECT COUNT(*) as count FROM task_assignees WHERE user_id = $1',
-            [user.id]
-        );
-
-        // Get pending tasks count
-        const { rows: pendingTasksRows } = await db.query(
-            `SELECT COUNT(*) as count FROM tasks t
-       WHERE t.status = 'TODO'
-       AND EXISTS (SELECT 1 FROM task_assignees WHERE task_id = t.id AND user_id = $1)`,
-            [user.id]
-        );
-
         // Get completed tasks count
         const { rows: completedTasksRows } = await db.query(
             `SELECT COUNT(*) as count FROM tasks t
@@ -62,29 +59,26 @@ export async function GET(request: NextRequest) {
             [user.id]
         );
 
-        // Get unread notifications count (all notifications are considered unread for now)
-        const { rows: notificationsRows } = await db.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1',
-            [user.id]
-        );
+        // Get total users count (only for admin)
+        let totalUsers = 0;
+        let activeUsers = 0;
+        if (userRole === 'admin') {
+            const { rows: usersRows } = await db.query('SELECT COUNT(*) as count FROM users');
+            totalUsers = parseInt(usersRows[0].count);
 
-        // Get recent activity
-        const { rows: activityRows } = await db.query(
-            `SELECT a.*, u.name as user_name
-       FROM activity_logs a
-       LEFT JOIN users u ON a.user_id = u.id
-       ORDER BY a.created_at DESC
-       LIMIT 10`
-        );
+            const { rows: activeUsersRows } = await db.query(
+                'SELECT COUNT(DISTINCT user_id) as count FROM task_assignees'
+            );
+            activeUsers = parseInt(activeUsersRows[0].count);
+        }
 
         const stats = {
-            projects_count: parseInt(projectsRows[0].count),
-            tasks_count: parseInt(tasksRows[0].count),
-            my_tasks_count: parseInt(myTasksRows[0].count),
-            pending_tasks_count: parseInt(pendingTasksRows[0].count),
-            completed_tasks_count: parseInt(completedTasksRows[0].count),
-            unread_notifications_count: parseInt(notificationsRows[0].count),
-            recent_activity: activityRows,
+            totalProjects: parseInt(projectsRows[0].count),
+            activeProjects: parseInt(activeProjectsRows[0].count),
+            totalTasks: parseInt(tasksRows[0].count),
+            completedTasks: parseInt(completedTasksRows[0].count),
+            totalUsers: totalUsers,
+            activeUsers: activeUsers,
         };
 
         return corsResponse(stats, request);

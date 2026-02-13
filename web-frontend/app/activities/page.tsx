@@ -9,11 +9,11 @@ interface Activity {
     action: string;
     entity_type: string;
     entity_id: string;
-    description: string;
     created_at: string;
     user_name: string;
     user_email: string;
     entity_title?: string;
+    details?: any; // JSONB field from activity_logs
 }
 
 export default function ActivitiesPage() {
@@ -31,6 +31,15 @@ export default function ActivitiesPage() {
             loadActivities();
         }
     }, [user, isLoading]);
+
+    const createTestActivities = async () => {
+        try {
+            await activitiesAPI.createTest();
+            loadActivities(); // Recharger les activités
+        } catch (error) {
+            console.error('Error creating test activities:', error);
+        }
+    };
 
     const loadActivities = async () => {
         try {
@@ -122,8 +131,18 @@ export default function ActivitiesPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Activités récentes</h1>
-                    <p className="text-gray-600 mt-1">Dernières activités dans le système</p>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Activités récentes</h1>
+                            <p className="text-gray-600 mt-1">Dernières activités dans le système</p>
+                        </div>
+                        <button
+                            onClick={createTestActivities}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Créer des activités de test
+                        </button>
+                    </div>
                 </div>
 
                 {/* Activities List */}
@@ -168,9 +187,9 @@ export default function ActivitiesPage() {
                                                     {formatDate(activity.created_at)}
                                                 </span>
                                             </div>
-                                            {activity.description && (
+                                            {activity.details?.description && (
                                                 <p className="text-sm text-gray-600 mt-1">
-                                                    {activity.description}
+                                                    {activity.details.description}
                                                 </p>
                                             )}
                                         </div>

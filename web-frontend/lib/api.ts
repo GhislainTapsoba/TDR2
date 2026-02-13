@@ -148,6 +148,7 @@ export const dashboardAPI = {
 // Activities API
 export const activitiesAPI = {
     getAll: () => api.get('/activities'),
+    createTest: () => api.post('/activities/test'),
 };
 
 // Roles API

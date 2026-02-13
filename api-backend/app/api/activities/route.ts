@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
                 a.action,
                 a.entity_type,
                 a.entity_id,
-                a.description,
                 a.created_at,
                 u.name as user_name,
                 u.email as user_email,
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
                     WHEN a.entity_type = 'task' THEN t.title
                     ELSE NULL
                 END as entity_title
-            FROM activities a
+            FROM activity_logs a
             JOIN users u ON a.user_id = u.id
             LEFT JOIN projects p ON a.entity_type = 'project' AND a.entity_id = p.id
             LEFT JOIN stages s ON a.entity_type = 'stage' AND a.entity_id = s.id
