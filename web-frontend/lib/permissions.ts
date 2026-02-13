@@ -18,13 +18,23 @@ export const pagePermissions: PagePermission[] = [
   },
   {
     path: '/projects',
+    requiredRole: ['admin', 'manager'],
+    description: 'Projets (création, modification, suppression)'
+  },
+  {
+    path: '/projects/[id]',
     requiredRole: ['admin', 'manager', 'employee'],
-    description: 'Projets'
+    description: 'Détail du projet (lecture seule pour employee)'
   },
   {
     path: '/tasks',
     requiredRole: ['admin', 'manager', 'employee'],
-    description: 'Tâches'
+    description: 'Tâches (gestion des tâches assignées pour employee)'
+  },
+  {
+    path: '/tasks/[id]',
+    requiredRole: ['admin', 'manager', 'employee'],
+    description: 'Détail de la tâche (lecture seule pour employee)'
   },
   {
     path: '/profile',
@@ -62,10 +72,10 @@ export const pagePermissions: PagePermission[] = [
  */
 export function canAccessPage(userRole: UserRole | null, path: string): boolean {
   if (!userRole) return false;
-  
+
   const permission = pagePermissions.find(p => p.path === path);
   if (!permission) return false;
-  
+
   return permission.requiredRole.includes(userRole);
 }
 
@@ -74,8 +84,8 @@ export function canAccessPage(userRole: UserRole | null, path: string): boolean 
  */
 export function getAccessiblePages(userRole: UserRole | null): PagePermission[] {
   if (!userRole) return [];
-  
-  return pagePermissions.filter(permission => 
+
+  return pagePermissions.filter(permission =>
     permission.requiredRole.includes(userRole)
   );
 }

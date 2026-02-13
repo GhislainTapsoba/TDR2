@@ -326,7 +326,7 @@ export default function DashboardPage() {
                                         <p className="text-xs text-gray-500 truncate">{member.project_title}</p>
                                     </div>
                                     <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-full flex-shrink-0">
-                                        {member.role || 'Membre'}
+                                        {member.user_role || 'Membre'}
                                     </span>
                                 </div>
                             ))}
