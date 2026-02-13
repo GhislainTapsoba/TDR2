@@ -73,8 +73,22 @@ export const pagePermissions: PagePermission[] = [
 export function canAccessPage(userRole: UserRole | null, path: string): boolean {
   if (!userRole) return false;
 
-  const permission = pagePermissions.find(p => p.path === path);
-  if (!permission) return false;
+  // Chercher une correspondance exacte ou avec pattern [id]
+  const permission = pagePermissions.find(p => {
+    // Correspondance exacte
+    if (p.path === path) return true;
+
+    // Correspondance avec pattern [id], [slug], etc.
+    // Remplace [id] par une regex qui match n'importe quel segment
+    const pattern = p.path.replace(/\[.*?\]/g, '[^/]+');
+    const regex = new RegExp(`^${pattern}$`);
+    return regex.test(path);
+  });
+
+  // Si aucune permission définie, autoriser par défaut pour admin
+  if (!permission) {
+    return userRole === 'admin';
+  }
 
   return permission.requiredRole.includes(userRole);
 }
