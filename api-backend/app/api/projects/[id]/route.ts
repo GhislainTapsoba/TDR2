@@ -41,7 +41,17 @@ export async function GET(
         }
 
         const { rows } = await db.query(
-            `SELECT p.*, m.name as manager_name, m.email as manager_email, c.name as created_by_name
+            `SELECT p.*, m.name as manager_name, m.email as manager_email, c.name as created_by_name,
+              (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email))
+               FROM project_members pm
+               JOIN users u ON pm.user_id = u.id
+               WHERE pm.project_id = p.id) as members,
+              (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email))
+               FROM task_assignees ta
+               JOIN tasks t ON ta.task_id = t.id
+               JOIN users u ON ta.user_id = u.id
+               WHERE t.project_id = p.id
+               GROUP BY u.id) as task_assignees
        FROM projects p
        LEFT JOIN users m ON p.manager_id = m.id
        LEFT JOIN users c ON p.created_by_id = c.id
