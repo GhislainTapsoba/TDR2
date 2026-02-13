@@ -64,8 +64,11 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     }
 
     const client = getMailjet();
-    const request = await client
-      .post('send', {
+
+    // CORRECTION: Utiliser la bonne syntaxe Mailjet v3.1
+    const request = client
+      .post('send', { version: 'v3.1' })
+      .request({
         Messages: [{
           From: {
             Email: process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
@@ -78,8 +81,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
           TextPart: options.text || '',
           HTMLPart: options.html,
         }]
-      })
-      .request();
+      });
 
     await request;
 
