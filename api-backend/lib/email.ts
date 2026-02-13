@@ -91,10 +91,6 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     );
   } catch (error) {
     console.error('Error sending email:', error);
-    [options.to, options.subject, options.html]
-  );
-  } catch (error) {
-    console.error('Error sending email:', error);
 
     // Log failed email
     await db.query(
