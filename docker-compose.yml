@@ -94,8 +94,8 @@ services:
       app-network:
         ipv4_address: 172.19.0.4
     healthcheck:
-      # Utilise test avec /dev/tcp qui est disponible dans les conteneurs bash
-      test: [ "CMD", "sh", "-c", "exec 3<>/dev/tcp/localhost/3000 && echo 'Health check OK' >&3 && exec 3<&-" ]
+      # Vérifie que le port 3000 est en écoute
+      test: [ "CMD", "sh", "-c", "netstat -tlnp | grep :3000 || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
