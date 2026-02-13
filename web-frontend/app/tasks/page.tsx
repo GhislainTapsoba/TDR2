@@ -246,12 +246,23 @@ export default function TasksPage() {
 
             {/* Create Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">Nouvelle tâche</h2>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Nouvelle tâche</h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowCreateModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                         <form onSubmit={handleCreateTask}>
-                            <div className="space-y-4">
-                                <div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Titre *
                                     </label>
@@ -263,7 +274,7 @@ export default function TasksPage() {
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Description
                                     </label>
@@ -309,30 +320,6 @@ export default function TasksPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Assigné à
-                                    </label>
-                                    <select
-                                        multiple
-                                        value={formData.assignee_ids}
-                                        onChange={(e) => {
-                                            const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                                            setFormData({ ...formData, assignee_ids: selectedOptions });
-                                        }}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        size={4}
-                                    >
-                                        {users.filter(user => user.role !== 'admin').map((user) => (
-                                            <option key={user.id} value={user.id}>
-                                                {user.name || user.email}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Date d'échéance
                                     </label>
                                     <input
@@ -341,6 +328,36 @@ export default function TasksPage() {
                                         onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Assigné à
+                                    </label>
+                                    <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                                        {users.filter(user => user.role !== 'admin').map((user) => (
+                                            <label key={user.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    value={user.id}
+                                                    checked={formData.assignee_ids.includes(user.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setFormData({ ...formData, assignee_ids: [...formData.assignee_ids, user.id] });
+                                                        } else {
+                                                            setFormData({ ...formData, assignee_ids: formData.assignee_ids.filter(id => id !== user.id) });
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                />
+                                                <span className="text-sm text-gray-700">
+                                                    {user.name || user.email}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Cochez les employés à assigner à cette tâche
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex justify-end space-x-3 mt-6">
