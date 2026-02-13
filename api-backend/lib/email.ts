@@ -68,37 +68,43 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       .post('send', {
         'Messages': [{
           'From': {
-            'Email': 'noreply@tdr2.com',
-            'Name': 'TDR2'
+            'Email': process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
+            'Name': process.env.MAIL_FROM_NAME || 'Team Project'
           },
-          ],
-        Subject: options.subject,
-        TextPart: options.text || '',
-        HTMLPart: options.html,
-      },
-      ],
-  });
+          'To': [{
+            'Email': options.to
+          }],
+          'Subject': options.subject,
+          'TextPart': options.text || '',
+          'HTMLPart': options.html,
+        }]
+      })
+      .request();
 
-  await request;
+    await request;
 
-  // Log email
-  await db.query(
-    `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
-       VALUES ($1, $2, $3, NOW(), 'sent')`,
+    // Log email
+    await db.query(
+      `INSERT INTO email_logs (recipient, subject, body, sent_at, status)
+         VALUES ($1, $2, $3, NOW(), 'sent')`,
+      [options.to, options.subject, options.html]
+    );
+  } catch (error) {
+    console.error('Error sending email:', error);
     [options.to, options.subject, options.html]
   );
-} catch (error) {
-  console.error('Error sending email:', error);
+  } catch (error) {
+    console.error('Error sending email:', error);
 
-  // Log failed email
-  await db.query(
-    `INSERT INTO email_logs (recipient, subject, body, sent_at, status, error_message)
+    // Log failed email
+    await db.query(
+      `INSERT INTO email_logs (recipient, subject, body, sent_at, status, error_message)
        VALUES ($1, $2, $3, NOW(), 'failed', $4)`,
-    [options.to, options.subject, options.html, (error as Error).message]
-  );
+      [options.to, options.subject, options.html, (error as Error).message]
+    );
 
-  throw error;
-}
+    throw error;
+  }
 }
 
 export async function sendSMS(options: SMSOptions): Promise<void> {
