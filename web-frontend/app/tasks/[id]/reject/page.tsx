@@ -1,56 +1,45 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { tasksAPI } from '@/lib/api';
 
-export default function RejectTaskPage({ params }: { params: Promise<{ id: string }> }) {
+export default function TaskRejectPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const token = searchParams.get('token');
+    const taskId = searchParams.get('id') || '';
+
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
     const [task, setTask] = useState<any>(null);
-    const [tokenValid, setTokenValid] = useState(true);
-    const [taskId, setTaskId] = useState<string>('');
-    const router = useRouter();
-    const { user } = useAuth();
 
     useEffect(() => {
-        const getTaskId = async () => {
-            const resolvedParams = await params;
-            setTaskId(resolvedParams.id);
+        if (!token) {
+            setError('Token de confirmation manquant');
+            return;
+        }
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-
-            if (!token) {
-                setTokenValid(false);
-                return;
+        // Fetch task details
+        const fetchTask = async () => {
+            try {
+                const response = await tasksAPI.getById(taskId);
+                setTask(response.data);
+            } catch (err: any) {
+                setError(err.response?.data?.error || 'Erreur lors du chargement de la tâche');
             }
-
-            // Fetch task details
-            fetch(`/api/tasks/${taskId}`)
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error('Tâche introuvable');
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    setTask(data);
-                })
-                .catch(err => {
-                    setError(err.message);
-                });
         };
 
-        getTaskId();
-    }, [params]);
+        fetchTask();
+    }, [token, taskId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!reason.trim()) {
-            setError('Le motif de refus est requis');
+            setError('Veuillez fournir une raison pour le refus');
             return;
         }
 
@@ -58,7 +47,7 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
         setError('');
 
         try {
-            const response = await fetch(`/api/tasks/${taskId}/reject`, {
+            const response = await fetch(`/api/tasks/${taskId}/reject?token=${token}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -72,16 +61,18 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
                 throw new Error(data.error || 'Erreur lors du refus de la tâche');
             }
 
-            // Redirect to success page or tasks list
-            router.push('/tasks?message=Tâche refusée avec succès');
-        } catch (err: any) {
-            setError(err.message);
+            setSuccess(true);
+            setTimeout(() => {
+                router.push('/dashboard');
+            }, 3000);
+        } catch (error: any) {
+            setError(error.message || 'Erreur serveur');
         } finally {
             setLoading(false);
         }
     };
 
-    if (!tokenValid) {
+    if (!token) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
@@ -90,10 +81,10 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Accès non autorisé</h1>
                         <p className="text-gray-600 mb-6">Ce lien de refus n'est pas valide ou a expiré.</p>
                         <button
-                            onClick={() => router.push('/tasks')}
+                            onClick={() => router.push('/dashboard')}
                             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                         >
-                            Retour aux tâches
+                            Retour au tableau de bord
                         </button>
                     </div>
                 </div>
@@ -101,20 +92,21 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
         );
     }
 
-    if (error && !task) {
+    if (success) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-                    <div className="text-center">
-                        <div className="text-red-500 text-6xl mb-4">❌</div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h1>
-                        <p className="text-gray-600 mb-6">{error}</p>
-                        <button
-                            onClick={() => router.push('/tasks')}
-                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-                        >
-                            Retour aux tâches
-                        </button>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Tâche refusée</h1>
+                    <p className="text-gray-600 mb-4">
+                        Votre refus a été enregistré avec succès. Vous allez être redirigé vers le tableau de bord...
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
                     </div>
                 </div>
             </div>
@@ -125,11 +117,15 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
         <div className="min-h-screen bg-gray-50 py-12 px-4">
             <div className="max-w-2xl mx-auto">
                 <div className="bg-white rounded-lg shadow-md p-8">
-                    <div className="text-center mb-8">
-                        <div className="text-red-500 text-6xl mb-4">❌</div>
+                    <div className="text-center mb-6">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">Refuser la tâche</h1>
                         <p className="text-gray-600">
-                            Veuillez indiquer la raison pour laquelle vous refusez cette tâche.
+                            Veuillez indiquer la raison pour laquelle vous refusez cette tâche
                         </p>
                     </div>
 
@@ -146,42 +142,42 @@ export default function RejectTaskPage({ params }: { params: Promise<{ id: strin
                         </div>
                     )}
 
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-600">{error}</p>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
-                                Motif du refus *
+                                Raison du refus *
                             </label>
                             <textarea
                                 id="reason"
+                                rows={6}
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                rows={6}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                placeholder="Veuillez expliquer pourquoi vous refusez cette tâche..."
+                                placeholder="Veuillez expliquer pourquoi vous ne pouvez pas accepter cette tâche..."
                                 required
                             />
                         </div>
 
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <p className="text-red-600">{error}</p>
-                            </div>
-                        )}
-
                         <div className="flex space-x-4">
+                            <button
+                                type="button"
+                                onClick={() => router.push('/dashboard')}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            >
+                                Annuler
+                            </button>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex-1 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Traitement en cours...' : 'Confirmer le refus'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/tasks')}
-                                className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 font-medium"
-                            >
-                                Annuler
+                                {loading ? 'Envoi en cours...' : 'Refuser la tâche'}
                             </button>
                         </div>
                     </form>

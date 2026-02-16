@@ -16,45 +16,70 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await verifyAuth(request);
-        if (!user) {
-            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
+        const { id: taskId } = await params;
+        const { searchParams } = new URL(request.url);
+        const token = searchParams.get('token');
+
+        if (!token) {
+            return corsResponse({ error: 'Token de confirmation requis' }, request, { status: 400 });
         }
 
-        const userRole = mapDbRoleToUserRole(user.role);
-        const resolvedParams = await params;
-        const taskId = resolvedParams.id;
-
-        // Check if user is assigned to this task
-        const { rows: assigneeRows } = await db.query(
-            'SELECT 1 FROM task_assignees WHERE task_id = $1 AND user_id = $2',
-            [taskId, user.id]
+        // Verify user from token
+        const { rows: tokenRows } = await db.query(
+            'SELECT user_id FROM task_assignees WHERE task_id = $1 AND confirmation_token = $2',
+            [taskId, token]
         );
 
-        if (assigneeRows.length === 0) {
-            return corsResponse({ error: 'Vous n\'êtes pas assigné à cette tâche' }, request, { status: 403 });
+        if (tokenRows.length === 0) {
+            return corsResponse({ error: 'Token invalide ou expiré' }, request, { status: 400 });
         }
 
-        // Check if task is already accepted or rejected
-        const { rows: taskRows } = await db.query(
-            'SELECT status, title, project_id FROM tasks WHERE id = $1',
-            [taskId]
+        const userId = tokenRows[0].user_id;
+
+        // Check current status in task_assignees
+        const { rows: statusRows } = await db.query(
+            'SELECT status FROM task_assignees WHERE task_id = $1 AND user_id = $2',
+            [taskId, userId]
         );
 
-        if (taskRows.length === 0) {
-            return corsResponse({ error: 'Tâche introuvable' }, request, { status: 404 });
+        if (statusRows.length === 0) {
+            return corsResponse({ error: 'Assignation non trouvée' }, request, { status: 404 });
         }
 
-        const task = taskRows[0];
-        if (task.status !== 'TODO') {
-            return corsResponse({ error: 'Cette tâche a déjà été acceptée ou refusée' }, request, { status: 400 });
+        const currentStatus = statusRows[0].status;
+        if (currentStatus !== 'pending') {
+            return corsResponse({
+                error: `Cette tâche a déjà été ${currentStatus === 'accepted' ? 'acceptée' : 'refusée'}`
+            }, request, { status: 400 });
         }
+
+        // Update task_assignees status to accepted
+        await db.query(
+            `UPDATE task_assignees 
+             SET status = 'accepted', responded_at = NOW() 
+             WHERE task_id = $1 AND user_id = $2`,
+            [taskId, userId]
+        );
 
         // Update task status to IN_PROGRESS
         await db.query(
             'UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2',
             ['IN_PROGRESS', taskId]
         );
+
+        // Get user and task details for notifications
+        const { rows: userRows } = await db.query(
+            'SELECT name, email FROM users WHERE id = $1',
+            [userId]
+        );
+
+        const { rows: taskRows } = await db.query(
+            'SELECT title, project_id FROM tasks WHERE id = $1',
+            [taskId]
+        );
+
+        const user = userRows[0];
+        const task = taskRows[0];
 
         // Get project details
         const { rows: projectRows } = await db.query(
@@ -66,7 +91,7 @@ export async function POST(
 
         // Create activity log
         await createActivityLog({
-            userId: user.id,
+            userId: userId,
             action: 'accepted_task',
             entityType: 'task',
             entityId: taskId,

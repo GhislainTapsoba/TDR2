@@ -409,13 +409,6 @@ export async function sendTaskAssignmentEmail(data: {
           ⚠️ Une fois que vous acceptez ou refusez cette tâche, vous ne pourrez plus changer votre décision.
         </p>
       </div>
-      
-      <p style="margin-top: 20px;">
-        <a href="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tasks/${data.taskId}" 
-           style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-           Voir les détails de la tâche
-        </a>
-      </p>
     `;
 
     await sendEmail({

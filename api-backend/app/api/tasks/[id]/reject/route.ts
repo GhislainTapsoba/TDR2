@@ -16,72 +16,86 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await verifyAuth(request);
-        if (!user) {
-            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
+        const { id: taskId } = await params;
+        const { searchParams } = new URL(request.url);
+        const token = searchParams.get('token');
+
+        if (!token) {
+            return corsResponse({ error: 'Token de confirmation requis' }, request, { status: 400 });
         }
 
-        const userRole = mapDbRoleToUserRole(user.role);
-        const resolvedParams = await params;
-        const taskId = resolvedParams.id;
+        // Get request body for rejection reason
         const body = await request.json();
         const { reason } = body;
 
         if (!reason || reason.trim().length === 0) {
-            return corsResponse({ error: 'Le motif de refus est requis' }, request, { status: 400 });
+            return corsResponse({ error: 'La raison du refus est requise' }, request, { status: 400 });
         }
 
-        // Check if user is assigned to this task
-        const { rows: assigneeRows } = await db.query(
-            'SELECT 1 FROM task_assignees WHERE task_id = $1 AND user_id = $2',
-            [taskId, user.id]
+        // Verify user from token
+        const { rows: tokenRows } = await db.query(
+            'SELECT user_id FROM task_assignees WHERE task_id = $1 AND confirmation_token = $2',
+            [taskId, token]
         );
 
-        if (assigneeRows.length === 0) {
-            return corsResponse({ error: 'Vous n\'êtes pas assigné à cette tâche' }, request, { status: 403 });
+        if (tokenRows.length === 0) {
+            return corsResponse({ error: 'Token invalide ou expiré' }, request, { status: 400 });
         }
 
-        // Check if task is already accepted or rejected
+        const userId = tokenRows[0].user_id;
+
+        // Check current status in task_assignees
+        const { rows: statusRows } = await db.query(
+            'SELECT status FROM task_assignees WHERE task_id = $1 AND user_id = $2',
+            [taskId, userId]
+        );
+
+        if (statusRows.length === 0) {
+            return corsResponse({ error: 'Assignation non trouvée' }, request, { status: 404 });
+        }
+
+        const currentStatus = statusRows[0].status;
+        if (currentStatus !== 'pending') {
+            return corsResponse({
+                error: `Cette tâche a déjà été ${currentStatus === 'accepted' ? 'acceptée' : 'refusée'}`
+            }, request, { status: 400 });
+        }
+
+        // Update task_assignees status to rejected
+        await db.query(
+            `UPDATE task_assignees 
+             SET status = 'rejected', responded_at = NOW() 
+             WHERE task_id = $1 AND user_id = $2`,
+            [taskId, userId]
+        );
+
+        // Get task details
         const { rows: taskRows } = await db.query(
-            'SELECT status, title, project_id FROM tasks WHERE id = $1',
+            'SELECT title, project_id FROM tasks WHERE id = $1',
             [taskId]
         );
 
-        if (taskRows.length === 0) {
-            return corsResponse({ error: 'Tâche introuvable' }, request, { status: 404 });
-        }
-
         const task = taskRows[0];
-        if (task.status !== 'TODO') {
-            return corsResponse({ error: 'Cette tâche a déjà été acceptée ou refusée' }, request, { status: 400 });
-        }
 
-        // Update task status to REJECTED and store rejection reason
+        // Add to task_rejections table
+        await db.query(
+            'INSERT INTO task_rejections (task_id, user_id, reason) VALUES ($1, $2, $3)',
+            [taskId, userId, reason.trim()]
+        );
+
+        // Update task status to REJECTED
         await db.query(
             'UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2',
             ['REJECTED', taskId]
         );
 
-        // Store rejection reason in activity log
-        await createActivityLog({
-            userId: user.id,
-            action: 'rejected_task',
-            entityType: 'task',
-            entityId: taskId,
-            description: `${user.name || user.email} a refusé la tâche "${task.title}"`,
-            details: {
-                task_title: task.title,
-                project_id: task.project_id,
-                rejection_reason: reason
-            }
-        });
-
-        // Also store in a separate rejections table for better tracking
-        await db.query(
-            `INSERT INTO task_rejections (task_id, user_id, reason, created_at)
-             VALUES ($1, $2, $3, NOW())`,
-            [taskId, user.id, reason]
+        // Get user details
+        const { rows: userRows } = await db.query(
+            'SELECT name, email FROM users WHERE id = $1',
+            [userId]
         );
+
+        const user = userRows[0];
 
         // Get project details
         const { rows: projectRows } = await db.query(
@@ -90,6 +104,20 @@ export async function POST(
         );
 
         const project = projectRows[0];
+
+        // Create activity log
+        await createActivityLog({
+            userId: userId,
+            action: 'rejected_task',
+            entityType: 'task',
+            entityId: taskId,
+            description: `${user.name || user.email} a refusé la tâche "${task.title}"`,
+            details: {
+                task_title: task.title,
+                project_id: task.project_id,
+                rejection_reason: reason.trim()
+            }
+        });
 
         // Notify project manager
         if (project.manager_id) {
@@ -111,7 +139,7 @@ export async function POST(
                         taskId: taskId,
                         projectName: project.title,
                         updatedBy: user.name || user.email,
-                        changes: `Tâche refusée. Raison: ${reason}`
+                        changes: `Tâche refusée. Raison: ${reason.trim()}`
                     });
                 } catch (error) {
                     console.error('Error sending email to manager:', error);
@@ -121,7 +149,7 @@ export async function POST(
                 try {
                     await sendSMS({
                         to: manager.phone,
-                        message: `❌ Tâche refusée: ${task.title} par ${user.name || user.email}. Raison: ${reason}`
+                        message: `❌ Tâche refusée: ${task.title} par ${user.name || user.email}. Raison: ${reason.trim()}`
                     });
                 } catch (error) {
                     console.error('Error sending SMS to manager:', error);
@@ -131,7 +159,7 @@ export async function POST(
                 try {
                     await sendWhatsApp({
                         to: manager.phone,
-                        message: `❌ *Tâche refusée*\n\n📋 Tâche: ${task.title}\n👤 Refusée par: ${user.name || user.email}\n📂 Projet: ${project.title}\n📝 Raison: ${reason}\n📊 Statut: Refusée`
+                        message: `❌ *Tâche refusée*\n\n📋 Tâche: ${task.title}\n👤 Refusée par: ${user.name || user.email}\n📂 Projet: ${project.title}\n� Raison: ${reason.trim()}`
                     });
                 } catch (error) {
                     console.error('Error sending WhatsApp to manager:', error);
@@ -146,7 +174,7 @@ export async function POST(
                 id: taskId,
                 status: 'REJECTED',
                 title: task.title,
-                rejection_reason: reason
+                rejection_reason: reason.trim()
             }
         }, request);
 
