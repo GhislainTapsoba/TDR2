@@ -51,6 +51,18 @@ export async function POST(request: NextRequest) {
         if (currentPasswordHash.startsWith('$2a$06$')) {
             try {
                 console.log('Using database crypt for pgcrypto hash (6 rounds)...');
+                console.log('Testing with currentPassword:', currentPassword);
+                console.log('Testing with hash:', currentPasswordHash);
+
+                // Test direct crypt function
+                const { rows: testRows } = await db.query(
+                    'SELECT crypt($1, $2) as test_hash',
+                    [currentPassword, currentPasswordHash]
+                );
+                console.log('Generated hash:', testRows[0].test_hash);
+                console.log('Original hash:', currentPasswordHash);
+                console.log('Hashes match:', testRows[0].test_hash === currentPasswordHash);
+
                 const { rows: verifyRows } = await db.query(
                     'SELECT crypt($1, $2) = $2 as is_valid',
                     [currentPassword, currentPasswordHash]
