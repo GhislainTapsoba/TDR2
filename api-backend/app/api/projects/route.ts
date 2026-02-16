@@ -39,7 +39,16 @@ export async function GET(request: NextRequest) {
         const whereClauses: string[] = [];
 
         // Filter by role
-        if (userRole !== 'admin') {
+        if (userRole === 'employee') {
+            // Employees can only see projects where they are assigned to tasks
+            whereClauses.push(`EXISTS (
+              SELECT 1 FROM tasks t
+              JOIN task_assignees ta ON t.id = ta.task_id
+              WHERE t.project_id = p.id AND ta.user_id = $${params.length + 1}
+            )`);
+            params.push(user.id);
+        } else if (userRole === 'manager') {
+            // Managers can see projects they manage or created, or where they are assigned to tasks
             whereClauses.push(`(p.manager_id = $${params.length + 1} OR p.created_by_id = $${params.length + 1}
         OR EXISTS (
           SELECT 1 FROM tasks t

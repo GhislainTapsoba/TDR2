@@ -136,12 +136,11 @@ export async function PUT(
             return corsResponse({ error: 'Projet introuvable' }, request, { status: 404 });
         }
 
-        // Check if user can manage project or work on it (for employees)
+        // Check if user can manage project (admin or manager only)
         const canManage = canManageProject(userRole, user.id, projectRows[0].manager_id);
-        const canWork = await canWorkOnProject(user.id, id);
 
-        if (!canManage && !canWork) {
-            return corsResponse({ error: 'Permission refusée' }, request, { status: 403 });
+        if (!canManage) {
+            return corsResponse({ error: 'Permission refusée - Seuls les admins et managers peuvent modifier les projets' }, request, { status: 403 });
         }
 
         const updateProject = async () => {

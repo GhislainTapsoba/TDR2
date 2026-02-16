@@ -87,7 +87,7 @@ export default function ProjectDetailPage() {
                                                 project.status === 'COMPLETED' ? 'Terminé' :
                                                     project.status === 'CANCELLED' ? 'Annulé' : project.status}
                                 </span>
-                                {(user && (user.role === 'admin' || user.role === 'manager' || project.manager_id === user.id)) && (
+                                {(user && (user.role === 'admin' || user.role === 'manager')) && (
                                     <Link
                                         href={`/projects/${params.id}/edit`}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
