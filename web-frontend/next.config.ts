@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Prevent environment variable exposure in error logs
   experimental: {
-    serverComponentsExternalPackages: [],
+    serverExternalPackages: [],
   },
   // Reduce verbose logging
   logging: {
