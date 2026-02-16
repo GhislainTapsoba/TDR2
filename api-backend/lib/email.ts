@@ -335,8 +335,8 @@ export async function sendTaskAssignmentEmail(data: {
     }
 
     const subject = `Nouvelle tâche assignée: ${data.taskTitle}`;
-    const acceptUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
-    const rejectUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
+    const acceptUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
+    const rejectUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
 
     const html = `
       <h2>🎯 Nouvelle tâche assignée</h2>
