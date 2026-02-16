@@ -11,7 +11,10 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // POST /api/tasks/[id]/reject - Reject a task
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const user = await verifyAuth(request);
         if (!user) {
@@ -19,7 +22,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
 
         const userRole = mapDbRoleToUserRole(user.role);
-        const taskId = params.id;
+        const resolvedParams = await params;
+        const taskId = resolvedParams.id;
         const body = await request.json();
         const { reason } = body;
 
