@@ -54,17 +54,9 @@ export async function POST(request: NextRequest) {
                 console.log('Testing with currentPassword:', currentPassword);
                 console.log('Testing with hash:', currentPasswordHash);
 
-                // Test direct crypt function
-                const { rows: testRows } = await db.query(
-                    'SELECT crypt($1, $2) as test_hash',
-                    [currentPassword, currentPasswordHash]
-                );
-                console.log('Generated hash:', testRows[0].test_hash);
-                console.log('Original hash:', currentPasswordHash);
-                console.log('Hashes match:', testRows[0].test_hash === currentPasswordHash);
-
+                // Use the correct method to verify bcrypt hash in PostgreSQL
                 const { rows: verifyRows } = await db.query(
-                    'SELECT crypt($1, $2) = $2 as is_valid',
+                    'SELECT $2 = crypt($1, $2) as is_valid',
                     [currentPassword, currentPasswordHash]
                 );
                 isValidPassword = verifyRows[0].is_valid;
