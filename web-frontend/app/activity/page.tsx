@@ -135,7 +135,9 @@ export default function ActivityPage() {
                                         {activity.user_name || 'Utilisateur'} a {getActionLabel(activity.action).toLowerCase()} {getEntityTypeLabel(activity.entity_type).toLowerCase()}
                                     </p>
                                     {activity.details && (
-                                        <p className="text-sm text-gray-600 mb-2">{activity.details}</p>
+                                        <p className="text-sm text-gray-600 mb-2">
+                                            {typeof activity.details === 'string' ? activity.details : JSON.stringify(activity.details, null, 2)}
+                                        </p>
                                     )}
                                     <p className="text-xs text-gray-500">
                                         {new Date(activity.created_at).toLocaleString()}
@@ -145,7 +147,7 @@ export default function ActivityPage() {
                         </div>
                     ))}
                 </div>
-                
+
                 {activities.length === 0 && (
                     <div className="text-center py-12">
                         <div className="text-gray-500">
