@@ -91,6 +91,53 @@ export default function ProfilePage() {
                 alert('Mot de passe changé avec succès');
                 setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 setShowPasswordForm(false);
+
+                // Show Eye-Off notification
+                const notificationMessage = `Votre mot de passe a été changé avec succès. Si vous n'êtes pas à l'origine de ce changement, veuillez contacter le support immédiatement.`;
+
+                // Create notification element
+                const notificationElement = document.createElement('div');
+                notificationElement.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #f87115;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 9999;
+                    font-size: 14px;
+                    max-width: 300px;
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                `;
+
+                notificationElement.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="flex-shrink: 0;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 0 0 3 12m0 0a3 3 0 0 0 3m-3 7.07 7.07l-6 6z" />
+                            <span style="color: white; font-weight: bold;">Eye-Off</span>
+                        </div>
+                        <div style="color: white; font-size: 12px;">
+                            Votre mot de passe a été modifié
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(notificationElement);
+
+                // Fade in
+                setTimeout(() => {
+                    notificationElement.style.opacity = '1';
+                }, 100);
+
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (notificationElement.parentNode) {
+                        notificationElement.parentNode.removeChild(notificationElement);
+                    }
+                }, 5000);
             } else {
                 const error = await response.json();
                 alert('Erreur: ' + (error.error || 'Impossible de changer le mot de passe'));

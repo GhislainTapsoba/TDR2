@@ -37,8 +37,12 @@ export async function POST(request: NextRequest) {
             return corsResponse({ error: 'Utilisateur non trouvé' }, request, { status: 404 });
         }
 
+        const currentPasswordHash = rows[0].password_hash;
+        console.log('Current password hash:', currentPasswordHash);
+        console.log('Current password type:', typeof currentPasswordHash);
+
         // Verify current password
-        const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password_hash);
+        const isValidPassword = await bcrypt.compare(currentPassword, currentPasswordHash);
         if (!isValidPassword) {
             return corsResponse({ error: 'Mot de passe actuel incorrect' }, request, { status: 400 });
         }
@@ -46,10 +50,16 @@ export async function POST(request: NextRequest) {
         // Hash new password
         const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
-        // Update password
+        // Update password and add Eye-Off confirmation
         await db.query(
             'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
             [newPasswordHash, user.id]
+        );
+
+        // Log the password change for security audit
+        await db.query(
+            'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+            [user.id, 'password_changed', 'user', user.id, 'Password changed successfully']
         );
 
         return corsResponse({ message: 'Mot de passe changé avec succès' }, request);
