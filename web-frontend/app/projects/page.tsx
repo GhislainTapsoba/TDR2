@@ -207,7 +207,7 @@ export default function ProjectsPage() {
             </div>
 
             {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {filteredProjects.map((project) => (
                     <div key={project.id} className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
                         <div className="p-6">

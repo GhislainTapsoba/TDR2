@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { tasksAPI, projectsAPI, usersAPI } from '@/lib/api';
+import { tasksAPI, projectsAPI, stagesAPI, usersAPI } from '@/lib/api';
 import BackButton from '@/components/BackButton';
 
 interface Task {
@@ -38,10 +38,17 @@ interface Project {
     title: string;
 }
 
+interface Stage {
+    id: string;
+    name: string;
+    project_id: string;
+}
+
 export default function TasksPage() {
     const { user } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [stages, setStages] = useState<Stage[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
@@ -51,6 +58,7 @@ export default function TasksPage() {
         description: '',
         priority: 'MEDIUM',
         project_id: '',
+        stage_id: '',
         due_date: '',
         assignee_ids: [] as string[],
         file: null as File | null
@@ -65,14 +73,16 @@ export default function TasksPage() {
     const loadData = async () => {
         try {
             const params = filter ? { status: filter } : {};
-            const [tasksResponse, projectsResponse, usersResponse] = await Promise.all([
+            const [tasksResponse, projectsResponse, usersResponse, stagesResponse] = await Promise.all([
                 tasksAPI.getAll(params),
                 projectsAPI.getAll(),
-                usersAPI.getAll()
+                usersAPI.getAll(),
+                stagesAPI.getAll()
             ]);
             setTasks(tasksResponse.data);
             setProjects(projectsResponse.data);
             setUsers(usersResponse.data);
+            setStages(stagesResponse.data);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -89,6 +99,9 @@ export default function TasksPage() {
             submitData.append('description', formData.description);
             submitData.append('priority', formData.priority);
             submitData.append('project_id', formData.project_id);
+            if (formData.stage_id) {
+                submitData.append('stage_id', formData.stage_id);
+            }
             submitData.append('due_date', formData.due_date);
             submitData.append('assignee_ids', JSON.stringify(formData.assignee_ids));
 
@@ -103,6 +116,7 @@ export default function TasksPage() {
                 description: '',
                 priority: 'MEDIUM',
                 project_id: '',
+                stage_id: '',
                 due_date: '',
                 assignee_ids: [],
                 file: null
@@ -211,7 +225,7 @@ export default function TasksPage() {
             </div>
 
             {/* Tasks Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {tasks.map((task) => (
                     <div key={task.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
                         <div className="p-6">
@@ -344,6 +358,23 @@ export default function TasksPage() {
                                         {projects.map((project) => (
                                             <option key={project.id} value={project.id}>
                                                 {project.title}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Étape (optionnel)
+                                    </label>
+                                    <select
+                                        value={formData.stage_id}
+                                        onChange={(e) => setFormData({ ...formData, stage_id: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Sélectionner une étape</option>
+                                        {stages.filter(stage => stage.project_id === formData.project_id).map((stage) => (
+                                            <option key={stage.id} value={stage.id}>
+                                                {stage.name}
                                             </option>
                                         ))}
                                     </select>

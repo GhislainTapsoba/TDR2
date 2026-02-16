@@ -68,6 +68,17 @@ export default function StagesPage() {
         }
     };
 
+    const handleDeleteStage = async (id: string) => {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette étape ?')) {
+            try {
+                await stagesAPI.delete(id);
+                loadStages();
+            } catch (error) {
+                console.error('Error deleting stage:', error);
+            }
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -115,7 +126,7 @@ export default function StagesPage() {
             </div>
 
             {/* Stages Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {stages.map((stage) => (
                     <div key={stage.id} className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
                         <div className="p-6">
@@ -150,8 +161,8 @@ export default function StagesPage() {
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                         className={`h-2 rounded-full ${stage.status === 'COMPLETED' ? 'bg-green-500' :
-                                                stage.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                                                    stage.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
+                                            stage.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                                                stage.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
                                             }`}
                                         style={{
                                             width: stage.status === 'COMPLETED' ? '100%' :
@@ -166,12 +177,22 @@ export default function StagesPage() {
                                 <span className="text-xs text-gray-500">
                                     ID: {stage.id}
                                 </span>
-                                <Link
-                                    href={`/stages/${stage.id}`}
-                                    className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                                >
-                                    Voir les détails
-                                </Link>
+                                <div className="flex gap-2">
+                                    {(user?.role === 'admin' || user?.role === 'manager') && (
+                                        <button
+                                            onClick={() => handleDeleteStage(stage.id)}
+                                            className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                        >
+                                            Supprimer
+                                        </button>
+                                    )}
+                                    <Link
+                                        href={`/stages/${stage.id}`}
+                                        className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                        Voir les détails
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>
