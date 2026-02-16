@@ -19,6 +19,11 @@ interface Task {
     assignees?: Array<{ id: string; name: string; email: string }>;
     due_date?: string;
     created_at: string;
+    file?: {
+        name: string;
+        url: string;
+        size: number;
+    };
 }
 
 interface User {
@@ -48,6 +53,7 @@ export default function TasksPage() {
         project_id: '',
         due_date: '',
         assignee_ids: [] as string[],
+        file: null as File | null
     });
 
     useEffect(() => {
@@ -77,7 +83,20 @@ export default function TasksPage() {
     const handleCreateTask = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await tasksAPI.create(formData);
+            // Créer FormData pour gérer l'upload de fichier
+            const submitData = new FormData();
+            submitData.append('title', formData.title);
+            submitData.append('description', formData.description);
+            submitData.append('priority', formData.priority);
+            submitData.append('project_id', formData.project_id);
+            submitData.append('due_date', formData.due_date);
+            submitData.append('assignee_ids', JSON.stringify(formData.assignee_ids));
+
+            if (formData.file) {
+                submitData.append('file', formData.file);
+            }
+
+            await tasksAPI.create(submitData);
             setShowCreateModal(false);
             setFormData({
                 title: '',
@@ -86,6 +105,7 @@ export default function TasksPage() {
                 project_id: '',
                 due_date: '',
                 assignee_ids: [],
+                file: null
             });
             loadData();
         } catch (error) {
@@ -236,8 +256,8 @@ export default function TasksPage() {
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                         className={`h-2 rounded-full ${task.status === 'COMPLETED' ? 'bg-green-500' :
-                                                task.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                                                    task.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
+                                            task.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                                                task.status === 'TODO' ? 'bg-gray-400' : 'bg-orange-500'
                                             }`}
                                         style={{
                                             width: task.status === 'COMPLETED' ? '100%' :
@@ -272,7 +292,7 @@ export default function TasksPage() {
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-lg p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Nouvelle tâche</h2>
                             <button
@@ -353,6 +373,29 @@ export default function TasksPage() {
                                         onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Fichier (optionnel)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setFormData({ ...formData, file });
+                                            }
+                                        }}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        accept=".pdf,.doc,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                                    />
+                                    {formData.file && (
+                                        <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                                            <p className="text-sm text-gray-600">
+                                                📎 {formData.file.name} ({(formData.file.size / 1024).toFixed(1)} KB)
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">

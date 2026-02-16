@@ -18,6 +18,11 @@ interface Project {
     manager_id?: string;
     created_at: string;
     updated_at: string;
+    file?: {
+        name: string;
+        url: string;
+        size: number;
+    };
 }
 
 interface Stage {
@@ -55,6 +60,7 @@ export default function EditProjectPage() {
         start_date: '',
         end_date: '',
         due_date: '',
+        file: null as File | null
     });
 
     useEffect(() => {
@@ -224,6 +230,45 @@ export default function EditProjectPage() {
                                         onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Fichier (optionnel)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setFormData({ ...formData, file });
+                                            }
+                                        }}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                                    />
+                                    {formData.file && (
+                                        <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                                            <p className="text-sm text-gray-600">
+                                                📎 {formData.file.name} ({(formData.file.size / 1024).toFixed(1)} KB)
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const url = URL.createObjectURL(formData.file);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = formData.file.name;
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                    URL.revokeObjectURL(url);
+                                                }}
+                                                className="ml-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                            >
+                                                Télécharger
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
