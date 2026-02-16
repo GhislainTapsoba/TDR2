@@ -68,7 +68,23 @@ export default function UsersPage() {
             await usersAPI.update(id, { is_active: !isActive });
             loadUsers();
         } catch (error) {
-            console.error('Error updating user:', error);
+            console.error('Error toggling user active status:', error);
+            alert('Erreur lors de la modification du statut');
+        }
+    };
+
+    const handleDeleteUser = async (id: string, name: string) => {
+        if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${name}" ? Cette action est irréversible.`)) {
+            return;
+        }
+
+        try {
+            await usersAPI.delete(id);
+            loadUsers();
+            alert('Utilisateur supprimé avec succès');
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Erreur lors de la suppression de l\'utilisateur');
         }
     };
 
@@ -166,11 +182,10 @@ export default function UsersPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            userItem.is_active 
-                                                ? 'bg-green-100 text-green-800' 
-                                                : 'bg-red-100 text-red-800'
-                                        }`}>
+                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${userItem.is_active
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
+                                            }`}>
                                             {userItem.is_active ? 'Actif' : 'Inactif'}
                                         </span>
                                     </td>
@@ -181,16 +196,24 @@ export default function UsersPage() {
                                         {new Date(userItem.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button
-                                            onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
-                                            className={`${
-                                                userItem.is_active 
-                                                    ? 'text-red-600 hover:text-red-900' 
-                                                    : 'text-green-600 hover:text-green-900'
-                                            }`}
-                                        >
-                                            {userItem.is_active ? 'Désactiver' : 'Activer'}
-                                        </button>
+                                        <div className="flex space-x-2">
+                                            <button
+                                                onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
+                                                className={`${userItem.is_active
+                                                        ? 'text-red-600 hover:text-red-900'
+                                                        : 'text-green-600 hover:text-green-900'
+                                                    }`}
+                                            >
+                                                {userItem.is_active ? 'Désactiver' : 'Activer'}
+                                            </button>
+                                            <span className="text-gray-300">|</span>
+                                            <button
+                                                onClick={() => handleDeleteUser(userItem.id, userItem.name || userItem.email)}
+                                                className="text-red-600 hover:text-red-900"
+                                            >
+                                                Supprimer
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
