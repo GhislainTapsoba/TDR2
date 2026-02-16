@@ -172,35 +172,42 @@ export async function POST(request: NextRequest) {
         if (parsedAssigneeIds && Array.isArray(parsedAssigneeIds) && parsedAssigneeIds.length > 0) {
             console.log('Assigning task to users:', parsedAssigneeIds);
 
-            // Insert assignees
+            // Insert assignees with confirmation tokens
             for (const assigneeId of parsedAssigneeIds) {
                 console.log('Inserting assignee:', assigneeId);
+
+                // Generate confirmation token for this assignee
+                const confirmationToken = await createConfirmationToken({
+                    type: 'TASK_ASSIGNMENT',
+                    userId: assigneeId,
+                    entityType: 'task',
+                    entityId: task.id,
+                    metadata: {
+                        task_title: task.title,
+                        project_name: project.title,
+                    },
+                });
+
+                // Insert assignee with token
                 await db.query(
-                    'INSERT INTO task_assignees (task_id, user_id) VALUES ($1, $2)',
-                    [task.id, assigneeId]
+                    `INSERT INTO task_assignees (task_id, user_id, confirmation_token, status) 
+                     VALUES ($1, $2, $3, 'pending')`,
+                    [task.id, assigneeId, confirmationToken]
                 );
             }
 
-            // Get assignee details
+            // Get assignee details with their tokens
             const { rows: assignees } = await db.query(
-                'SELECT id, name, email FROM users WHERE id = ANY($1::uuid[])',
-                [parsedAssigneeIds]
+                `SELECT u.id, u.name, u.email, ta.confirmation_token 
+                 FROM users u 
+                 JOIN task_assignees ta ON u.id = ta.user_id 
+                 WHERE ta.task_id = $1 AND u.id = ANY($2::uuid[])`,
+                [task.id, parsedAssigneeIds]
             );
 
             // Send email to each assignee
             for (const assignee of assignees) {
                 try {
-                    const confirmationToken = await createConfirmationToken({
-                        type: 'TASK_ASSIGNMENT',
-                        userId: assignee.id,
-                        entityType: 'task',
-                        entityId: task.id,
-                        metadata: {
-                            task_title: task.title,
-                            project_name: project.title,
-                        },
-                    });
-
                     await sendTaskAssignmentEmail({
                         to: assignee.email,
                         recipientId: assignee.id,
@@ -210,7 +217,7 @@ export async function POST(request: NextRequest) {
                         projectName: project.title,
                         assignedBy: user.name || user.email,
                         assignedById: user.id,
-                        confirmationToken,
+                        confirmationToken: assignee.confirmation_token,
                     });
 
                     // Create notification
