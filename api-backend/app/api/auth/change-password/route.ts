@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
             return corsResponse({ error: 'Le mot de passe doit contenir au moins 6 caractères' }, request, { status: 400 });
         }
 
-        // Get current password hash
+        // Get current password hash and original password
         const { rows } = await db.query(
-            'SELECT password_hash FROM users WHERE id = $1',
+            'SELECT password_hash, password FROM users WHERE id = $1',
             [user.id]
         );
 
@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
         }
 
         const currentPasswordHash = rows[0].password_hash;
+        const originalPassword = rows[0].password;
         console.log('Current password hash:', currentPasswordHash);
+        console.log('Original password from DB:', originalPassword);
         console.log('Current password type:', typeof currentPasswordHash);
 
         // Verify current password
