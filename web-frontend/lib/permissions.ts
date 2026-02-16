@@ -18,8 +18,8 @@ export const pagePermissions: PagePermission[] = [
   },
   {
     path: '/projects',
-    requiredRole: ['admin', 'manager'],
-    description: 'Projets (création, modification, suppression)'
+    requiredRole: ['admin', 'manager', 'employee'],
+    description: 'Projets (lecture seule pour employee)'
   },
   {
     path: '/projects/[id]',
