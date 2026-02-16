@@ -4,10 +4,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',
-  // Prevent environment variable exposure in error logs
-  experimental: {
-    serverExternalPackages: [],
-  },
   // Reduce verbose logging
   logging: {
     fetches: {
