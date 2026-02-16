@@ -44,25 +44,35 @@ export async function POST(request: NextRequest) {
         // Verify current password
         let isValidPassword = false;
 
+        console.log('Starting password verification...');
+        console.log('Hash format check:', currentPasswordHash.startsWith('$2a$'));
+
         // Try bcrypt comparison first (for hashes created with bcryptjs)
         try {
+            console.log('Trying bcrypt comparison...');
             isValidPassword = await bcrypt.compare(currentPassword, currentPasswordHash);
+            console.log('bcrypt result:', isValidPassword);
         } catch (error) {
             console.log('bcrypt comparison failed, trying database verification');
+            console.log('bcrypt error:', error);
         }
 
         // If bcrypt fails, try database verification (for hashes created with pgcrypto)
         if (!isValidPassword && currentPasswordHash.startsWith('$2a$')) {
             try {
+                console.log('Trying database crypt verification...');
                 const { rows: verifyRows } = await db.query(
                     'SELECT crypt($1, $2) = $2 as is_valid',
                     [currentPassword, currentPasswordHash]
                 );
                 isValidPassword = verifyRows[0].is_valid;
+                console.log('Database crypt result:', isValidPassword);
             } catch (error) {
                 console.error('Database password verification failed:', error);
             }
         }
+
+        console.log('Final password validation result:', isValidPassword);
 
         if (!isValidPassword) {
             return corsResponse({ error: 'Mot de passe actuel incorrect' }, request, { status: 400 });
