@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         // Log the password change for security audit
         await db.query(
             'INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
-            [user.id, 'password_changed', 'user', user.id, 'Password changed successfully']
+            [user.id, 'password_changed', 'user', user.id, '{"message": "Password changed successfully"}']
         );
 
         return corsResponse({ message: 'Mot de passe changé avec succès' }, request);
