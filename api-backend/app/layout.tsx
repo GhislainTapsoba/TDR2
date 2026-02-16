@@ -1,4 +1,8 @@
 import React from 'react';
+import { scheduleTaskReminders } from '@/lib/task-reminders';
+
+// Schedule task reminders to run every hour
+scheduleTaskReminders();
 
 export const metadata = {
   title: 'TDR2 API Backend',

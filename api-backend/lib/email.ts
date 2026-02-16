@@ -335,6 +335,9 @@ export async function sendTaskAssignmentEmail(data: {
     }
 
     const subject = `Nouvelle tâche assignée: ${data.taskTitle}`;
+    const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
+    const rejectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
+
     const html = `
       <h2>🎯 Nouvelle tâche assignée</h2>
       <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
@@ -345,9 +348,29 @@ export async function sendTaskAssignmentEmail(data: {
       </div>
       <p>Bonjour ${data.recipientName},</p>
       <p>Vous avez été assigné(e) à cette tâche par <strong>${assignedByName || 'un utilisateur'}</strong>. Veuillez consulter le tableau de bord pour plus de détails.</p>
-      ${data.confirmationToken ? `<div style="background-color: #e8f4fd; padding: 10px; border-radius: 5px; margin: 10px 0;"><p><strong>🔑 Token de confirmation:</strong> ${data.confirmationToken}</p></div>` : ''}
+      
+      <div style="background-color: #e8f4fd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p style="margin: 0 0 10px 0;"><strong>� Actions requises:</strong></p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="${acceptUrl}" 
+             style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             ✅ Accepter la tâche
+          </a>
+          <a href="${rejectUrl}" 
+             style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             ❌ Refuser la tâche
+          </a>
+        </div>
+        <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">
+          ⚠️ Une fois que vous acceptez ou refusez cette tâche, vous ne pourrez plus changer votre décision.
+        </p>
+      </div>
+      
       <p style="margin-top: 20px;">
-        <a href="#" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir la tâche</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${data.taskId}" 
+           style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Voir les détails de la tâche
+        </a>
       </p>
     `;
 
