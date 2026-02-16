@@ -88,56 +88,12 @@ export default function ProfilePage() {
             });
 
             if (response.ok) {
+                // Show Eye-Off notification first
+                showEyeOffNotification();
+
                 alert('Mot de passe changé avec succès');
                 setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 setShowPasswordForm(false);
-
-                // Show Eye-Off notification
-                const notificationMessage = `Votre mot de passe a été changé avec succès. Si vous n'êtes pas à l'origine de ce changement, veuillez contacter le support immédiatement.`;
-
-                // Create notification element
-                const notificationElement = document.createElement('div');
-                notificationElement.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #f87115;
-                    color: white;
-                    padding: 12px 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    z-index: 9999;
-                    font-size: 14px;
-                    max-width: 300px;
-                    opacity: 0;
-                    transition: opacity 0.3s ease-in-out;
-                `;
-
-                notificationElement.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="flex-shrink: 0;">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 0 0 3 12m0 0a3 3 0 0 0 3m-3 7.07 7.07l-6 6z" />
-                            <span style="color: white; font-weight: bold;">Eye-Off</span>
-                        </div>
-                        <div style="color: white; font-size: 12px;">
-                            Votre mot de passe a été modifié
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(notificationElement);
-
-                // Fade in
-                setTimeout(() => {
-                    notificationElement.style.opacity = '1';
-                }, 100);
-
-                // Auto remove after 5 seconds
-                setTimeout(() => {
-                    if (notificationElement.parentNode) {
-                        notificationElement.parentNode.removeChild(notificationElement);
-                    }
-                }, 5000);
             } else {
                 const error = await response.json();
                 alert('Erreur: ' + (error.error || 'Impossible de changer le mot de passe'));
@@ -145,6 +101,68 @@ export default function ProfilePage() {
         } catch (error) {
             alert('Erreur lors du changement de mot de passe');
         }
+    };
+
+    const showEyeOffNotification = () => {
+        // Create notification element
+        const notificationElement = document.createElement('div');
+        notificationElement.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f87115 0%, #ea580c 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(248, 113, 21, 0.3);
+            z-index: 9999;
+            font-size: 14px;
+            max-width: 320px;
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        `;
+
+        notificationElement.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="background: rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px; flex-shrink: 0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                        <span>Eye-Off</span>
+                        <span style="background: rgba(255, 255, 255, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500;">SÉCURITÉ</span>
+                    </div>
+                    <div style="color: rgba(255, 255, 255, 0.9); font-size: 12px; line-height: 1.4;">
+                        Votre mot de passe a été modifié avec succès. Si vous n'êtes pas à l'origine de ce changement, veuillez contacter le support immédiatement.
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(notificationElement);
+
+        // Fade in
+        setTimeout(() => {
+            notificationElement.style.opacity = '1';
+            notificationElement.style.transform = 'translateY(0)';
+        }, 100);
+
+        // Auto remove after 6 seconds
+        setTimeout(() => {
+            if (notificationElement.parentNode) {
+                notificationElement.style.opacity = '0';
+                notificationElement.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    if (notificationElement.parentNode) {
+                        notificationElement.parentNode.removeChild(notificationElement);
+                    }
+                }, 300);
+            }
+        }, 6000);
     };
 
     if (isLoading || loading || !profile) {
