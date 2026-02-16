@@ -293,11 +293,11 @@ export default function ProjectsPage() {
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full">
-                        <div className="p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-4">Nouveau projet</h2>
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Nouveau projet</h2>
                             <form onSubmit={handleCreateProject}>
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Titre *
@@ -318,7 +318,7 @@ export default function ProjectsPage() {
                                         <textarea
                                             value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            rows={3}
+                                            rows={4}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="Description du projet"
                                         />
@@ -379,7 +379,7 @@ export default function ProjectsPage() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Membres de l'équipe
                                         </label>
-                                        <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                                        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
                                             {users.filter(u => u.role === 'employee').map((userItem) => (
                                                 <label key={userItem.id} className="flex items-center space-x-2">
                                                     <input
@@ -403,17 +403,17 @@ export default function ProjectsPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex justify-end space-x-3 mt-6">
+                                <div className="flex justify-end space-x-4 mt-8">
                                     <button
                                         type="button"
                                         onClick={() => setShowCreateModal(false)}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                                        className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
                                     >
                                         Annuler
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
                                     >
                                         Créer le projet
                                     </button>
