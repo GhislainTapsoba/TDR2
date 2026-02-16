@@ -91,9 +91,14 @@ export default function ProfilePage() {
                 // Show Eye-Off notification first
                 showEyeOffNotification();
 
-                alert('Mot de passe changé avec succès');
+                // Clear form and hide password section
                 setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 setShowPasswordForm(false);
+
+                // Show success alert after a short delay to let notification appear first
+                setTimeout(() => {
+                    alert('Mot de passe changé avec succès');
+                }, 500);
             } else {
                 const error = await response.json();
                 alert('Erreur: ' + (error.error || 'Impossible de changer le mot de passe'));
