@@ -105,7 +105,18 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { title, description, status = 'TODO', priority = 'MEDIUM', due_date, assignee_ids, project_id, stage_id } = body;
 
-        console.log('Task creation request body:', { title, description, status, priority, due_date, assignee_ids, project_id, stage_id });
+        // Parse assignee_ids if it's a string
+        let parsedAssigneeIds = assignee_ids;
+        if (typeof assignee_ids === 'string') {
+            try {
+                parsedAssigneeIds = JSON.parse(assignee_ids);
+            } catch (e) {
+                console.error('Error parsing assignee_ids:', e);
+                parsedAssigneeIds = [];
+            }
+        }
+
+        console.log('Task creation request body:', { title, description, status, priority, due_date, assignee_ids: parsedAssigneeIds, project_id, stage_id });
 
         if (!title || !project_id) {
             return corsResponse({ error: 'Le titre et le project_id sont requis' }, request, { status: 400 });
@@ -158,11 +169,11 @@ export async function POST(request: NextRequest) {
         );
 
         // Assign users and send emails
-        if (assignee_ids && Array.isArray(assignee_ids) && assignee_ids.length > 0) {
-            console.log('Assigning task to users:', assignee_ids);
+        if (parsedAssigneeIds && Array.isArray(parsedAssigneeIds) && parsedAssigneeIds.length > 0) {
+            console.log('Assigning task to users:', parsedAssigneeIds);
 
             // Insert assignees
-            for (const assigneeId of assignee_ids) {
+            for (const assigneeId of parsedAssigneeIds) {
                 console.log('Inserting assignee:', assigneeId);
                 await db.query(
                     'INSERT INTO task_assignees (task_id, user_id) VALUES ($1, $2)',
@@ -173,7 +184,7 @@ export async function POST(request: NextRequest) {
             // Get assignee details
             const { rows: assignees } = await db.query(
                 'SELECT id, name, email FROM users WHERE id = ANY($1::uuid[])',
-                [assignee_ids]
+                [parsedAssigneeIds]
             );
 
             // Send email to each assignee
