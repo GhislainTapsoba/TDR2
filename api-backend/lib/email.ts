@@ -241,9 +241,9 @@ export async function createConfirmationToken(data: string | { type: string; use
 
   // Store token in database
   await db.query(
-    `INSERT INTO email_confirmations (email, token, created_at, expires_at, metadata)
-     VALUES ($1, $2, NOW(), NOW() + INTERVAL '24 hours', $3)`,
-    [email, token, metadata ? JSON.stringify(metadata) : null]
+    `INSERT INTO email_confirmations (email, token, type, created_at, expires_at, metadata)
+     VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '24 hours', $4)`,
+    [email, token, metadata ? metadata.type : null, metadata ? JSON.stringify(metadata) : null]
   );
 
   return token;
