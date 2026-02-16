@@ -255,14 +255,16 @@ export default function EditProjectPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    const url = URL.createObjectURL(formData.file);
-                                                    const link = document.createElement('a');
-                                                    link.href = url;
-                                                    link.download = formData.file.name;
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
-                                                    URL.revokeObjectURL(url);
+                                                    if (formData.file) {
+                                                        const url = URL.createObjectURL(formData.file);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = formData.file.name;
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }
                                                 }}
                                                 className="ml-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                                             >
