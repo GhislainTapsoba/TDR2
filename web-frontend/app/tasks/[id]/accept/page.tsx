@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function AcceptTaskPage({ params }: { params: { id: string } }) {
+export default function AcceptTaskPage({ params }: { params: Promise<{ id: string }> }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -12,33 +12,42 @@ export default function AcceptTaskPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const { user } = useAuth();
 
+    const [taskId, setTaskId] = useState<string>('');
+
     useEffect(() => {
-        const acceptTask = async () => {
-            try {
-                const response = await fetch(`/api/tasks/${params.id}/accept`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
+        const getTaskId = async () => {
+            const resolvedParams = await params;
+            setTaskId(resolvedParams.id);
 
-                const data = await response.json();
+            const acceptTask = async () => {
+                try {
+                    const response = await fetch(`/api/tasks/${resolvedParams.id}/accept`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erreur lors de l\'acceptation de la tâche');
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Erreur lors de l\'acceptation de la tâche');
+                    }
+
+                    setTask(data.task);
+                    setSuccess(true);
+                } catch (err: any) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
                 }
+            };
 
-                setTask(data.task);
-                setSuccess(true);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
+            acceptTask();
         };
 
-        acceptTask();
-    }, [params.id]);
+        getTaskId();
+    }, [params]);
 
     if (loading) {
         return (
@@ -86,7 +95,7 @@ export default function AcceptTaskPage({ params }: { params: { id: string } }) {
                         </p>
                         <div className="space-y-3">
                             <button
-                                onClick={() => router.push(`/tasks/${params.id}`)}
+                                onClick={() => router.push(`/tasks/${taskId}`)}
                                 className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium"
                             >
                                 Voir les détails de la tâche

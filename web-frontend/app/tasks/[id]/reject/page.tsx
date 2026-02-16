@@ -4,43 +4,51 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function RejectTaskPage({ params }: { params: { id: string } }) {
+export default function RejectTaskPage({ params }: { params: Promise<{ id: string }> }) {
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [task, setTask] = useState<any>(null);
     const [tokenValid, setTokenValid] = useState(true);
+    const [taskId, setTaskId] = useState<string>('');
     const router = useRouter();
     const { user } = useAuth();
 
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        
-        if (!token) {
-            setTokenValid(false);
-            return;
-        }
+        const getTaskId = async () => {
+            const resolvedParams = await params;
+            setTaskId(resolvedParams.id);
 
-        // Fetch task details
-        fetch(`/api/tasks/${params.id}`)
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error('Tâche introuvable');
-                }
-                return res.json();
-            })
-            .then(data => {
-                setTask(data);
-            })
-            .catch(err => {
-                setError(err.message);
-            });
-    }, [params.id]);
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                setTokenValid(false);
+                return;
+            }
+
+            // Fetch task details
+            fetch(`/api/tasks/${taskId}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Tâche introuvable');
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    setTask(data);
+                })
+                .catch(err => {
+                    setError(err.message);
+                });
+        };
+
+        getTaskId();
+    }, [params]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!reason.trim()) {
             setError('Le motif de refus est requis');
             return;
@@ -50,7 +58,7 @@ export default function RejectTaskPage({ params }: { params: { id: string } }) {
         setError('');
 
         try {
-            const response = await fetch(`/api/tasks/${params.id}/reject`, {
+            const response = await fetch(`/api/tasks/${taskId}/reject`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -180,7 +188,7 @@ export default function RejectTaskPage({ params }: { params: { id: string } }) {
 
                     <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                            <strong>⚠️ Important:</strong> Une fois que vous refusez cette tâche, vous ne pourrez plus l'accepter. 
+                            <strong>⚠️ Important:</strong> Une fois que vous refusez cette tâche, vous ne pourrez plus l'accepter.
                             Le gestionnaire de projet sera notifié de votre décision et du motif du refus.
                         </p>
                     </div>
