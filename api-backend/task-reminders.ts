@@ -108,28 +108,28 @@ async function processTaskReminders() {
                 );
 
                 console.log(`Reminder sent for task ${task.title} (user ${task.user_name})`);
+
+                // Send reminder emails to managers and admins
+                try {
+                    const managersAndAdmins = await getManagersAndAdmins();
+                    for (const manager of managersAndAdmins) {
+                        await sendTaskReminderEmail({
+                            to: manager.email,
+                            recipientId: manager.id,
+                            recipientName: manager.name || 'Manager/Admin',
+                            taskTitle: task.title,
+                            taskId: task.task_id,
+                            projectName: '', // We don't have project name in this query
+                            dueDate: task.due_date,
+                        });
+                    }
+                } catch (managerEmailError) {
+                    console.error('Error sending reminder emails to managers/admins:', managerEmailError);
+                    // Continue even if manager emails fail
+                }
             } catch (error) {
                 console.error(`Error processing reminder for task ${task.task_id}:`, error);
             }
-        }
-
-        // Send reminder emails to managers and admins
-        try {
-            const managersAndAdmins = await getManagersAndAdmins();
-            for (const manager of managersAndAdmins) {
-                await sendTaskReminderEmail({
-                    to: manager.email,
-                    recipientId: manager.id,
-                    recipientName: manager.name || 'Manager/Admin',
-                    taskTitle: task.title,
-                    taskId: task.task_id,
-                    projectName: '', // We don't have project name in this query
-                    dueDate: task.due_date,
-                });
-            }
-        } catch (managerEmailError) {
-            console.error('Error sending reminder emails to managers/admins:', managerEmailError);
-            // Continue even if manager emails fail
         }
 
         console.log('Task reminders processing completed');
