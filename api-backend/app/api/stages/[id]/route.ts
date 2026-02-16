@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
+import { createActivityLog } from '@/lib/activity-logger';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
