@@ -92,6 +92,7 @@ export default function EditProjectPage() {
                 start_date: projectRes.data.start_date || '',
                 end_date: projectRes.data.end_date || '',
                 due_date: projectRes.data.due_date || '',
+                file: null
             });
         } catch (error) {
             console.error('Error loading project:', error);
