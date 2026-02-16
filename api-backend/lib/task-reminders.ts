@@ -16,7 +16,7 @@ interface TaskReminder {
 export async function sendTaskReminders(): Promise<void> {
     try {
         console.log('🔄 Checking for task reminders...');
-        
+
         // Get tasks that need reminders
         const query = `
             SELECT 
@@ -46,16 +46,28 @@ export async function sendTaskReminders(): Promise<void> {
                 -- Only send reminders every 24 hours
                 t.id NOT IN (
                     SELECT task_id FROM task_reminders 
-                    WHERE sent_at > NOW() - INTERVAL '24 hours'
+                    WHERE created_at > NOW() - INTERVAL '24 hours'
                 )
             )
         `;
 
         const { rows } = await db.query(query);
-        
+
         console.log(`Found ${rows.length} tasks needing reminders`);
 
+        if (rows.length === 0) {
+            console.log('No tasks need reminders at this time');
+            return;
+        }
+
+        console.log('Tasks needing reminders:');
         for (const task of rows) {
+            console.log(`  - ${task.taskTitle} (ID: ${task.taskId})`);
+        }
+
+        for (const task of rows) {
+            console.log(`Found ${rows.length} tasks needing reminders`);
+            console.log(`  - ${task.taskTitle} (ID: ${task.taskId})`);
             await sendReminderForTask(task as TaskReminder);
         }
 
@@ -68,10 +80,10 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
     const now = new Date();
     const dueDate = new Date(task.dueDate);
     const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
+
     let reminderType: 'overdue' | 'due_soon' | 'due_very_soon';
     let urgency: 'low' | 'medium' | 'high' | 'critical';
-    
+
     if (hoursUntilDue < 0) {
         reminderType = 'overdue';
         urgency = 'critical';
@@ -90,22 +102,22 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
     try {
         // Send email reminder
         await sendTaskReminderEmail(task, reminderType, urgency);
-        
+
         // Send SMS reminder
         await sendTaskReminderSMS(task, reminderType, urgency);
-        
+
         // Send WhatsApp reminder
         await sendTaskReminderWhatsApp(task, reminderType, urgency);
-        
+
         // Log the reminder
         await db.query(
-            `INSERT INTO task_reminders (task_id, sent_at, reminder_type, urgency)
+            `INSERT INTO task_reminders (task_id, created_at, reminder_type, urgency)
              VALUES ($1, NOW(), $2, $3)`,
             [task.taskId, reminderType, urgency]
         );
 
         console.log(`✅ Reminder sent for task: ${task.taskTitle}`);
-        
+
     } catch (error) {
         console.error(`❌ Failed to send reminder for task ${task.taskTitle}:`, error);
     }
@@ -114,7 +126,7 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
 async function sendTaskReminderEmail(task: TaskReminder, reminderType: string, urgency: string): Promise<void> {
     const subject = getReminderSubject(task.taskTitle, reminderType);
     const html = getReminderEmailHTML(task, reminderType, urgency);
-    
+
     await sendEmail({
         to: task.assigneeEmail,
         subject,
@@ -124,7 +136,7 @@ async function sendTaskReminderEmail(task: TaskReminder, reminderType: string, u
 
 async function sendTaskReminderSMS(task: TaskReminder, reminderType: string, urgency: string): Promise<void> {
     const message = getReminderSMS(task, reminderType, urgency);
-    
+
     await sendSMS({
         to: task.assigneePhone,
         message
@@ -133,7 +145,7 @@ async function sendTaskReminderSMS(task: TaskReminder, reminderType: string, urg
 
 async function sendTaskReminderWhatsApp(task: TaskReminder, reminderType: string, urgency: string): Promise<void> {
     const message = getReminderWhatsApp(task, reminderType, urgency);
-    
+
     await sendWhatsApp({
         to: task.assigneePhone,
         message
@@ -156,11 +168,11 @@ function getReminderSubject(taskTitle: string, reminderType: string): string {
 function getReminderEmailHTML(task: TaskReminder, reminderType: string, urgency: string): string {
     const urgencyColors = {
         low: '#28a745',
-        medium: '#ffc107', 
+        medium: '#ffc107',
         high: '#fd7e14',
         critical: '#dc3545'
     };
-    
+
     const urgencyIcons = {
         low: '🟢',
         medium: '🟡',
@@ -181,7 +193,7 @@ function getReminderEmailHTML(task: TaskReminder, reminderType: string, urgency:
 
     let statusMessage = '';
     let statusColor = '';
-    
+
     switch (reminderType) {
         case 'overdue':
             statusMessage = 'Cette tâche est EN RETARD';
@@ -252,7 +264,7 @@ function getReminderSMS(task: TaskReminder, reminderType: string, urgency: strin
     });
 
     let message = '';
-    
+
     switch (reminderType) {
         case 'overdue':
             message = `⚠️ TÂCHE EN RETARD: ${task.taskTitle}. Échéance: ${dueDate}. Projet: ${task.projectName}. Veuillez compléter cette tâche dès que possible.`;
@@ -281,7 +293,7 @@ function getReminderWhatsApp(task: TaskReminder, reminderType: string, urgency: 
 
     let statusEmoji = '';
     let statusText = '';
-    
+
     switch (reminderType) {
         case 'overdue':
             statusEmoji = '⚠️';
@@ -317,9 +329,9 @@ ${statusEmoji} *Rappel de tâche - ${statusText}*
 export function scheduleTaskReminders(): void {
     // Run immediately
     sendTaskReminders();
-    
+
     // Then run every hour
     setInterval(sendTaskReminders, 60 * 60 * 1000);
-    
+
     console.log('📅 Task reminders scheduled to run every hour');
 }
