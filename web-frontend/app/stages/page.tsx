@@ -174,9 +174,6 @@ export default function StagesPage() {
                             </div>
 
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                                <span className="text-xs text-gray-500">
-                                    ID: {stage.id}
-                                </span>
                                 <div className="flex gap-2">
                                     {(user?.role === 'admin' || user?.role === 'manager') && (
                                         <button

@@ -150,3 +150,69 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
+// DELETE /api/stages - Delete a stage
+export async function DELETE(request: NextRequest) {
+    try {
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
+        }
+
+        const userRole = mapDbRoleToUserRole(user.role);
+        const hasPermission = await requirePermission(userRole, 'stages', 'delete');
+        if (!hasPermission.allowed) {
+            return corsResponse({ error: hasPermission.error || 'Permission refusée' }, request, { status: 403 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const stageId = searchParams.get('id');
+
+        if (!stageId) {
+            return corsResponse({ error: 'ID de l\'étape requis' }, request, { status: 400 });
+        }
+
+        // Check if stage exists and user can delete it
+        const { rows: stageRows } = await db.query(
+            'SELECT s.*, p.manager_id FROM stages s LEFT JOIN projects p ON s.project_id = p.id WHERE s.id = $1',
+            [stageId]
+        );
+
+        if (stageRows.length === 0) {
+            return corsResponse({ error: 'Étape introuvable' }, request, { status: 404 });
+        }
+
+        // Check if user can manage project or work on it
+        const canManage = canManageProject(userRole, user.id, stageRows[0].manager_id);
+        const canWork = await canWorkOnProject(user.id, stageRows[0].project_id);
+
+        if (!canManage && !canWork) {
+            return corsResponse({ error: 'Permission refusée pour cette étape' }, request, { status: 403 });
+        }
+
+        // Delete stage
+        await db.query('DELETE FROM stages WHERE id = $1', [stageId]);
+
+        // Create activity log for stage deletion
+        await createActivityLog({
+            userId: user.id,
+            action: 'deleted',
+            entityType: 'stage',
+            entityId: stageId,
+            description: `Étape "${stageRows[0].name}" supprimée`,
+            details: {
+                stage_name: stageRows[0].name,
+                project_id: stageRows[0].project_id
+            }
+        });
+
+        return corsResponse({ message: 'Étape supprimée avec succès' }, request, { status: 200 });
+    } catch (error) {
+        console.error('Delete stage error:', error);
+        return corsResponse(
+            { error: 'Erreur serveur' },
+            request,
+            { status: 500 }
+        );
+    }
+}
