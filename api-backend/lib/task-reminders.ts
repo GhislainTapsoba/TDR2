@@ -62,13 +62,17 @@ export async function sendTaskReminders(): Promise<void> {
 
         console.log('Tasks needing reminders:');
         for (const task of rows) {
-            console.log(`  - ${task.taskTitle} (ID: ${task.taskId})`);
-        }
-
-        for (const task of rows) {
-            console.log(`Found ${rows.length} tasks needing reminders`);
-            console.log(`  - ${task.taskTitle} (ID: ${task.taskId})`);
-            await sendReminderForTask(task as TaskReminder);
+            console.log(`  - ${task.task_title} (ID: ${task.task_id})`);
+            await sendReminderForTask({
+                taskId: task.task_id,
+                taskTitle: task.task_title,
+                projectName: task.project_title,
+                dueDate: task.due_date,
+                priority: task.priority,
+                assigneeEmail: task.assignee_email,
+                assigneePhone: task.assignee_phone,
+                assigneeName: task.assignee_name
+            } as TaskReminder);
         }
 
     } catch (error) {
