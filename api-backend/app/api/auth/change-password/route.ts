@@ -43,23 +43,53 @@ export async function POST(request: NextRequest) {
         console.log('Original password from DB:', originalPassword);
         console.log('Current password type:', typeof currentPasswordHash);
 
+        // Use the original password hash (from password column) for verification
+        const passwordHashToVerify = originalPassword || currentPasswordHash;
+
         // Verify current password
         let isValidPassword = false;
 
         console.log('Starting password verification...');
-        console.log('Hash format check:', currentPasswordHash.startsWith('$2a$'));
+        console.log('Hash format check:', passwordHashToVerify.startsWith('$2a$'));
 
+        // For hashes created with bcryptjs (10 rounds), use bcrypt.compare
+        if (passwordHashToVerify.startsWith('$2a$10$')) {
+            try {
+                console.log('Using bcrypt comparison for bcryptjs hash (10 rounds)...');
+                console.log('Testing with currentPassword:', currentPassword);
+                console.log('Testing with hash:', passwordHashToVerify);
+
+                isValidPassword = await bcrypt.compare(currentPassword, passwordHashToVerify);
+                console.log('bcrypt result:', isValidPassword);
+            } catch (error) {
+                console.log('bcrypt comparison failed, trying database verification');
+                console.log('bcrypt error:', error);
+
+                // Fallback to database crypt
+                try {
+                    console.log('Fallback: trying database crypt verification...');
+                    const { rows: verifyRows } = await db.query(
+                        'SELECT $2 = crypt($1, $2) as is_valid',
+                        [currentPassword, passwordHashToVerify]
+                    );
+                    isValidPassword = verifyRows[0].is_valid;
+                    console.log('Database crypt fallback result:', isValidPassword);
+                } catch (error) {
+                    console.error('Database password verification failed:', error);
+                }
+            }
+        }
         // For hashes created with pgcrypto (6 rounds), use database crypt directly
-        if (currentPasswordHash.startsWith('$2a$06$')) {
+        else if (passwordHashToVerify.startsWith('$2a$06$')) {
             try {
                 console.log('Using database crypt for pgcrypto hash (6 rounds)...');
                 console.log('Testing with currentPassword:', currentPassword);
-                console.log('Testing with hash:', currentPasswordHash);
+                console.log('Testing with hash:', passwordHashToVerify);
 
                 // Use the correct method to verify bcrypt hash in PostgreSQL
                 const { rows: verifyRows } = await db.query(
                     'SELECT $2 = crypt($1, $2) as is_valid',
-                    [currentPassword, currentPasswordHash]
+                    [currentPassword, passwordHashToVerify]
                 );
                 isValidPassword = verifyRows[0].is_valid;
                 console.log('Database crypt result:', isValidPassword);
@@ -67,28 +97,22 @@ export async function POST(request: NextRequest) {
                 console.error('Database password verification failed:', error);
             }
         } else {
-            // For hashes created with bcryptjs (10 rounds), use bcrypt.compare
+            // Unknown hash format, try both methods
             try {
-                console.log('Trying bcrypt comparison for bcryptjs hash...');
-                isValidPassword = await bcrypt.compare(currentPassword, currentPasswordHash);
+                console.log('Unknown hash format, trying bcrypt comparison...');
+                isValidPassword = await bcrypt.compare(currentPassword, passwordHashToVerify);
                 console.log('bcrypt result:', isValidPassword);
             } catch (error) {
-                console.log('bcrypt comparison failed, trying database verification');
-                console.log('bcrypt error:', error);
-
-                // Fallback to database crypt
-                if (currentPasswordHash.startsWith('$2a$')) {
-                    try {
-                        console.log('Fallback: trying database crypt verification...');
-                        const { rows: verifyRows } = await db.query(
-                            'SELECT crypt($1, $2) = $2 as is_valid',
-                            [currentPassword, currentPasswordHash]
-                        );
-                        isValidPassword = verifyRows[0].is_valid;
-                        console.log('Database crypt fallback result:', isValidPassword);
-                    } catch (error) {
-                        console.error('Database password verification failed:', error);
-                    }
+                console.log('bcrypt failed, trying database crypt...');
+                try {
+                    const { rows: verifyRows } = await db.query(
+                        'SELECT $2 = crypt($1, $2) as is_valid',
+                        [currentPassword, passwordHashToVerify]
+                    );
+                    isValidPassword = verifyRows[0].is_valid;
+                    console.log('Database crypt result:', isValidPassword);
+                } catch (error) {
+                    console.error('All verification methods failed:', error);
                 }
             }
         }
