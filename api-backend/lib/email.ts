@@ -335,8 +335,8 @@ export async function sendTaskAssignmentEmail(data: {
     }
 
     const subject = `Nouvelle tâche assignée: ${data.taskTitle}`;
-    const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
-    const rejectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
+    const acceptUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
+    const rejectUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
 
     const html = `
       <h2>🎯 Nouvelle tâche assignée</h2>
@@ -367,7 +367,7 @@ export async function sendTaskAssignmentEmail(data: {
       </div>
       
       <p style="margin-top: 20px;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${data.taskId}" 
+        <a href="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tasks/${data.taskId}" 
            style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
            Voir les détails de la tâche
         </a>
