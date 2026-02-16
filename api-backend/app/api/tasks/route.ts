@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
-import { sendTaskAssignmentEmail, sendTaskUpdateEmail, createConfirmationToken } from '@/lib/email';
+import { sendTaskAssignmentEmail, sendTaskUpdateEmail, createConfirmationToken, getManagersAndAdmins } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -227,6 +227,29 @@ export async function POST(request: NextRequest) {
                     console.error('Error sending email to assignee:', emailError);
                     // Continue even if email fails
                 }
+            }
+
+            // Send notification emails to managers and admins
+            try {
+                const managersAndAdmins = await getManagersAndAdmins();
+                for (const manager of managersAndAdmins) {
+                    // Skip if it's the same user who assigned the task
+                    if (manager.id !== user.id) {
+                        await sendTaskAssignmentEmail({
+                            to: manager.email,
+                            recipientId: manager.id,
+                            recipientName: manager.name || 'Manager/Admin',
+                            taskTitle: task.title,
+                            taskId: task.id,
+                            projectName: project.title,
+                            assignedBy: user.name || user.email,
+                            assignedById: user.id,
+                        });
+                    }
+                }
+            } catch (managerEmailError) {
+                console.error('Error sending emails to managers/admins:', managerEmailError);
+                // Continue even if manager emails fail
             }
 
             task.assignees = assignees;

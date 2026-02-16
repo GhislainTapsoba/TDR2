@@ -304,6 +304,50 @@ export async function sendTaskUpdateEmail(data: {
   }
 }
 
+export async function getManagersAndAdmins(): Promise<{ id: string, name: string, email: string, role: string }[]> {
+  const { rows } = await db.query(`
+    SELECT id, name, email, role 
+    FROM users 
+    WHERE role IN ('admin', 'manager') 
+    AND is_active = true
+  `);
+  return rows;
+}
+
+export async function sendTaskReminderEmail(data: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName?: string;
+  dueDate: string;
+}): Promise<void> {
+  try {
+    const subject = `Rappel de tâche: ${data.taskTitle}`;
+    const html = `
+      <h2>⏰ Rappel de tâche</h2>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+        <p><strong>📂 Projet:</strong> ${data.projectName || 'N/A'}</p>
+        <p><strong>📋 Tâche:</strong> ${data.taskTitle}</p>
+        <p><strong>🆔 ID:</strong> ${data.taskId}</p>
+        <p><strong>📅 Date d'échéance:</strong> ${new Date(data.dueDate).toLocaleDateString()}</p>
+      </div>
+      <p>Bonjour ${data.recipientName},</p>
+      <p>Ceci est un rappel pour la tâche <strong>${data.taskTitle}</strong> qui arrive à échéance le ${new Date(data.dueDate).toLocaleDateString()}. Veuillez vous assurer qu'elle est complétée à temps.</p>
+    `;
+
+    await sendEmail({
+      to: data.to,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error sending task reminder email:', error);
+    throw error;
+  }
+}
+
 export async function sendTaskAssignmentEmail(data: {
   to: string;
   recipientId: string;

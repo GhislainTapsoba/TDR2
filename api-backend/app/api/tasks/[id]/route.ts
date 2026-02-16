@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
-import { sendTaskUpdateEmail, createConfirmationToken } from '@/lib/email';
+import { sendTaskUpdateEmail, createConfirmationToken, getManagersAndAdmins } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -227,6 +227,30 @@ export async function PUT(
                         console.error('Error sending email:', emailError);
                     }
                 }
+            }
+
+            // Send notification emails to managers and admins
+            try {
+                const managersAndAdmins = await getManagersAndAdmins();
+                for (const manager of managersAndAdmins) {
+                    // Skip if it's the same user who updated the task
+                    if (manager.id !== user.id) {
+                        await sendTaskUpdateEmail({
+                            to: manager.email,
+                            recipientId: manager.id,
+                            recipientName: manager.name || 'Manager/Admin',
+                            taskTitle: updatedTask.title,
+                            taskId: id,
+                            projectName: currentTask.project_title,
+                            updatedBy: user.name || user.email,
+                            updatedById: user.id,
+                            changes: 'Tâche mise à jour',
+                        });
+                    }
+                }
+            } catch (managerEmailError) {
+                console.error('Error sending emails to managers/admins:', managerEmailError);
+                // Continue even if manager emails fail
             }
         }
 

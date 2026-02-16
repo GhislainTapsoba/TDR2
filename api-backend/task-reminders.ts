@@ -1,6 +1,16 @@
 import 'dotenv/config';
 import { db } from './lib/db';
-import { sendEmail, sendSMS, sendWhatsApp } from './lib/email';
+import { sendEmail, sendSMS, sendWhatsApp, sendTaskReminderEmail, getManagersAndAdmins } from './lib/email';
+
+interface Task {
+    task_id: string;
+    title: string;
+    due_date: string;
+    user_id: string;
+    user_name: string;
+    user_email: string;
+    user_phone: string;
+}
 
 async function processTaskReminders() {
     console.log('Processing task reminders...');
@@ -101,6 +111,25 @@ async function processTaskReminders() {
             } catch (error) {
                 console.error(`Error processing reminder for task ${task.task_id}:`, error);
             }
+        }
+
+        // Send reminder emails to managers and admins
+        try {
+            const managersAndAdmins = await getManagersAndAdmins();
+            for (const manager of managersAndAdmins) {
+                await sendTaskReminderEmail({
+                    to: manager.email,
+                    recipientId: manager.id,
+                    recipientName: manager.name || 'Manager/Admin',
+                    taskTitle: task.title,
+                    taskId: task.task_id,
+                    projectName: '', // We don't have project name in this query
+                    dueDate: task.due_date,
+                });
+            }
+        } catch (managerEmailError) {
+            console.error('Error sending reminder emails to managers/admins:', managerEmailError);
+            // Continue even if manager emails fail
         }
 
         console.log('Task reminders processing completed');
