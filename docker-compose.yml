@@ -13,7 +13,7 @@ services:
       app-network:
         ipv4_address: 172.19.0.2
     ports:
-      - "127.0.0.1:5433:5432" # accessible uniquement depuis localhost
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-deep-user} -d ${POSTGRES_DB:-deep-db}" ]
       interval: 10s
@@ -135,6 +135,10 @@ services:
     container_name: play-sms
     ports:
       - "127.0.0.1:8080:80"
+    volumes:
+      - playsms-web:/var/www/html/playsms
+      - playsms-log:/var/log/playsms
+      - playsms-lib:/var/lib/playsms
     networks:
       app-network:
         ipv4_address: 172.19.0.7
@@ -145,6 +149,7 @@ services:
       - PLAYSMS_DB_NAME=playsms
       - PLAYSMS_DB_USER=playsms
       - PLAYSMS_DB_PASS=play-sms
+      - WEB_ADMIN_PASSWORD=Admin123x
     depends_on:
       mariadb-play-sms:
         condition: service_healthy
@@ -187,4 +192,10 @@ volumes:
   minio-data:
     driver: local
   mariadb-play-sms-data:
+    driver: local
+  playsms-web:
+    driver: local
+  playsms-log:
+    driver: local
+  playsms-lib:
     driver: local
