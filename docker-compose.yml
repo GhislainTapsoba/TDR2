@@ -109,6 +109,27 @@ services:
       createbuckets:
         condition: service_completed_successfully
 
+  # MySQL for Play SMS
+  mysql-play-sms:
+    image: mysql:8.0
+    container_name: mysql-play-sms
+    environment:
+      MYSQL_ROOT_PASSWORD: play-sms-root
+      MYSQL_DATABASE: playsms
+      MYSQL_USER: playsms
+      MYSQL_PASSWORD: play-sms
+    volumes:
+      - mysql-play-sms-data:/var/lib/mysql
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.8
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "playsms", "-pplay-sms" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Play SMS Service
   play-sms:
     image: playsms/playsms:latest
@@ -122,20 +143,13 @@ services:
         ipv4_address: 172.19.0.7
     restart: unless-stopped
     environment:
-      - DB_TYPE=pgsql
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=${POSTGRES_DB:-deep-db}
-      - DB_USER=${POSTGRES_USER:-deep-user}
-      - DB_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
-      # Variables pour Play SMS (compatibilité MySQL)
-      - MYSQL_DATABASE=${POSTGRES_DB:-deep-db}
-      - MYSQL_USER=${POSTGRES_USER:-deep-user}
-      - MYSQL_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
-      - MYSQL_HOST=postgres
-      - MYSQL_PORT=5432
+      - MYSQL_DATABASE=playsms
+      - MYSQL_USER=playsms
+      - MYSQL_PASSWORD=play-sms
+      - MYSQL_HOST=mysql-play-sms
+      - MYSQL_PORT=3306
     depends_on:
-      postgres:
+      mysql-play-sms:
         condition: service_healthy
 
   # Frontend
@@ -176,4 +190,6 @@ volumes:
   minio-data:
     driver: local
   play-sms-data:
+    driver: local
+  mysql-play-sms-data:
     driver: local
