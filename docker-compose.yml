@@ -128,6 +128,12 @@ services:
       - DB_NAME=${POSTGRES_DB:-deep-db}
       - DB_USER=${POSTGRES_USER:-deep-user}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
+      # Variables pour Play SMS (compatibilité MySQL)
+      - MYSQL_DATABASE=${POSTGRES_DB:-deep-db}
+      - MYSQL_USER=${POSTGRES_USER:-deep-user}
+      - MYSQL_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
+      - MYSQL_HOST=postgres
+      - MYSQL_PORT=5432
     depends_on:
       postgres:
         condition: service_healthy
