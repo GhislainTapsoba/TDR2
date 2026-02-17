@@ -29,7 +29,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Configure Apache VirtualHost → /var/www/html/playsms
+# Configure Apache VirtualHost
 RUN printf '<VirtualHost *:80>\n\
     ServerName localhost\n\
     DocumentRoot /var/www/html/playsms\n\

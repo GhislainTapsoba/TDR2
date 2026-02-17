@@ -21,41 +21,40 @@ echo "MariaDB is ready."
 if [ ! -f "${INSTALL_DONE_FLAG}" ]; then
     echo "Installing PlaySMS..."
 
-    # 1. Create directories (per official INSTALL.md)
+    # Create directories
     mkdir -p "${PATHWEB}" "${PATHLOG}" "${PATHLIB}"
     chown -R www-data "${PATHWEB}" "${PATHLOG}" "${PATHLIB}"
 
-    # 2. Copy web files (web/* → webroot)
+    # Copy web files
     cp -R "${SRC}/web/." "${PATHWEB}/"
     chown -R www-data "${PATHWEB}"
 
-    # 3. Import database schema
+    # Import database schema
     echo "Importing database schema..."
     mysql -h"${PLAYSMS_DB_HOST}" -P"${PLAYSMS_DB_PORT}" \
           -u"${PLAYSMS_DB_USER}" -p"${PLAYSMS_DB_PASS}" \
           "${PLAYSMS_DB_NAME}" < "${SRC}/db/playsms.sql"
 
-    # 4. Configure config.php (edit in-place, fill all fields)
+    # Configure config.php — vrais tokens du config-dist.php
     cp "${PATHWEB}/config-dist.php" "${PATHWEB}/config.php"
-    sed -i "s|'DB_HOST'.*|'DB_HOST', '${PLAYSMS_DB_HOST}');|"  "${PATHWEB}/config.php"
-    sed -i "s|'DB_PORT'.*|'DB_PORT', '${PLAYSMS_DB_PORT}');|"  "${PATHWEB}/config.php"
-    sed -i "s|'DB_USER'.*|'DB_USER', '${PLAYSMS_DB_USER}');|"  "${PATHWEB}/config.php"
-    sed -i "s|'DB_PASS'.*|'DB_PASS', '${PLAYSMS_DB_PASS}');|"  "${PATHWEB}/config.php"
-    sed -i "s|'DB_NAME'.*|'DB_NAME', '${PLAYSMS_DB_NAME}');|"  "${PATHWEB}/config.php"
-    sed -i "s|_APPS_PATH_LOG_.*|_APPS_PATH_LOG_, '${PATHLOG}');|" "${PATHWEB}/config.php"
-    sed -i "s|_APPS_PATH_STORAGE_.*|_APPS_PATH_STORAGE_, '${PATHWEB}/storage');|" "${PATHWEB}/config.php"
+    sed -i "s|#MYSQL_HOST#|${PLAYSMS_DB_HOST}|g"      "${PATHWEB}/config.php"
+    sed -i "s|#MYSQL_TCP_PORT#|${PLAYSMS_DB_PORT}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#MYSQL_USER#|${PLAYSMS_DB_USER}|g"      "${PATHWEB}/config.php"
+    sed -i "s|#MYSQL_PWD#|${PLAYSMS_DB_PASS}|g"       "${PATHWEB}/config.php"
+    sed -i "s|#MYSQL_DBNAME#|${PLAYSMS_DB_NAME}|g"    "${PATHWEB}/config.php"
+    sed -i "s|#PATHLOG#|${PATHLOG}|g"                 "${PATHWEB}/config.php"
 
-    # 5. Set up daemon
+    # Setup daemon
     cp "${SRC}/daemon/linux/etc/playsmsd.conf" /etc/playsmsd.conf
     cp "${SRC}/daemon/linux/bin/playsmsd.php"  /usr/local/bin/playsmsd
     chmod +x /usr/local/bin/playsmsd
 
-    sed -i "s|PLAYSMS_PATH=.*|PLAYSMS_PATH=\"${PATHWEB}\"|"   /etc/playsmsd.conf
-    sed -i "s|PLAYSMS_BIN=.*|PLAYSMS_BIN=\"/usr/local/bin\"|" /etc/playsmsd.conf
-    sed -i "s|PLAYSMS_LOG=.*|PLAYSMS_LOG=\"${PATHLOG}\"|"     /etc/playsmsd.conf
-    sed -i "s|PLAYSMS_LIB=.*|PLAYSMS_LIB=\"${PATHLIB}\"|"     /etc/playsmsd.conf
+    sed -i "s|PLAYSMS_PATH=.*|PLAYSMS_PATH=\"${PATHWEB}\"|"    /etc/playsmsd.conf
+    sed -i "s|PLAYSMS_BIN=.*|PLAYSMS_BIN=\"/usr/local/bin\"|"  /etc/playsmsd.conf
+    sed -i "s|PLAYSMS_LOG=.*|PLAYSMS_LOG=\"${PATHLOG}\"|"      /etc/playsmsd.conf
+    sed -i "s|PLAYSMS_LIB=.*|PLAYSMS_LIB=\"${PATHLIB}\"|"      /etc/playsmsd.conf
 
-    # 6. Set admin password in DB
+    # Set admin password in DB
     ADMIN_PASS="${WEB_ADMIN_PASSWORD:-changemeplease}"
     ADMIN_PASS_MD5=$(echo -n "${ADMIN_PASS}" | md5sum | awk '{print $1}')
     mysql -h"${PLAYSMS_DB_HOST}" -P"${PLAYSMS_DB_PORT}" \
@@ -65,9 +64,9 @@ if [ ! -f "${INSTALL_DONE_FLAG}" ]; then
           2>/dev/null || true
 
     # Final permissions
+    mkdir -p "${PATHWEB}/storage"
     chown -R www-data:www-data "${PATHWEB}" "${PATHLOG}" "${PATHLIB}"
     chmod -R 755 "${PATHWEB}"
-    mkdir -p "${PATHWEB}/storage" && chown -R www-data:www-data "${PATHWEB}/storage"
 
     touch "${INSTALL_DONE_FLAG}"
     echo "PlaySMS installation complete."
