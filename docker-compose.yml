@@ -130,7 +130,7 @@ services:
 
   # Play SMS Service
   play-sms:
-    image: playsms/playsms:1.4
+    image: play-sms/playsms:latest
     container_name: play-sms
     ports:
       - "127.0.0.1:8080:80"
