@@ -43,10 +43,10 @@ export async function sendTaskReminders(): Promise<void> {
                 t.due_date <= NOW()
             )
             AND (
-                -- Only send reminders every 24 hours
+                -- Only send reminders every 48 hours (2 days) to reduce email frequency
                 t.id NOT IN (
                     SELECT task_id FROM task_reminders 
-                    WHERE created_at > NOW() - INTERVAL '24 hours'
+                    WHERE created_at > NOW() - INTERVAL '48 hours'
                 )
             )
         `;
@@ -323,13 +323,13 @@ ${statusEmoji} *Rappel de tâche - ${statusText}*
     `.trim();
 }
 
-// Schedule to run every 6 hours
+// Schedule to run every 12 hours
 export function scheduleTaskReminders(): void {
     // Run immediately
     sendTaskReminders();
 
-    // Then run every 6 hours
-    setInterval(sendTaskReminders, 6 * 60 * 60 * 1000);
+    // Then run every 12 hours
+    setInterval(sendTaskReminders, 12 * 60 * 60 * 1000);
 
-    console.log('📅 Task reminders scheduled to run every 6 hours');
+    console.log('📅 Task reminders scheduled to run every 12 hours');
 }

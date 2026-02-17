@@ -19,21 +19,21 @@ RUN apt-get update && apt-get install -y \
     default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone PlaySMS source at BUILD time (not runtime)
+# Clone PlaySMS source at BUILD time (no network needed at runtime)
 RUN git clone -b 1.4.x https://github.com/playsms/playsms.git /usr/local/src/playsms
 
-# Pre-install Composer dependencies at build time too
+# Pre-install Composer dependencies at build time
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     cd /usr/local/src/playsms && composer update --no-interaction
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Configure Apache VirtualHost
+# Configure Apache VirtualHost → /var/www/html/playsms
 RUN printf '<VirtualHost *:80>\n\
     ServerName localhost\n\
-    DocumentRoot /var/www/playsms\n\
-    <Directory /var/www/playsms>\n\
+    DocumentRoot /var/www/html/playsms\n\
+    <Directory /var/www/html/playsms>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
