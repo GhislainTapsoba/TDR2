@@ -90,7 +90,7 @@ export default function UserDetailPage() {
 
         try {
             await usersAPI.delete(userId);
-            alert('Utilisateur supprimé avec succès');
+            alert('Utilisateur désactivé avec succès');
             router.push('/users');
         } catch (error: any) {
             console.error('Delete error:', error);
@@ -102,8 +102,6 @@ export default function UserDetailPage() {
                 setError('Vous n\'avez pas les permissions nécessaires pour supprimer cet utilisateur');
             } else if (errorMessage.includes('propre compte')) {
                 setError('Vous ne pouvez pas supprimer votre propre compte');
-            } else if (errorMessage.includes('tâches assignées') || errorMessage.includes('projets gérés')) {
-                setError('Impossible de supprimer cet utilisateur : il a des tâches assignées ou des projets gérés');
             }
         }
     };

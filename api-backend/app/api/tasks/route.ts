@@ -236,29 +236,6 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // Send notification emails to managers and admins
-            try {
-                const managersAndAdmins = await getManagersAndAdmins();
-                for (const manager of managersAndAdmins) {
-                    // Skip if it's the same user who assigned the task
-                    if (manager.id !== user.id) {
-                        await sendTaskAssignmentEmail({
-                            to: manager.email,
-                            recipientId: manager.id,
-                            recipientName: manager.name || 'Manager/Admin',
-                            taskTitle: task.title,
-                            taskId: task.id,
-                            projectName: project.title,
-                            assignedBy: user.name || user.email,
-                            assignedById: user.id,
-                        });
-                    }
-                }
-            } catch (managerEmailError) {
-                console.error('Error sending emails to managers/admins:', managerEmailError);
-                // Continue even if manager emails fail
-            }
-
             task.assignees = assignees;
         }
 

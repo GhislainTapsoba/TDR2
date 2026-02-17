@@ -232,6 +232,13 @@ export async function PUT(
             // Send notification emails to managers and admins
             try {
                 const managersAndAdmins = await getManagersAndAdmins();
+
+                // Create specific change message
+                let changeMessage = 'Tâche mise à jour';
+                if (status && status !== currentTask.status) {
+                    changeMessage = `Statut changé de "${currentTask.status}" à "${status}"`;
+                }
+
                 for (const manager of managersAndAdmins) {
                     // Skip if it's the same user who updated the task
                     if (manager.id !== user.id) {
@@ -244,7 +251,7 @@ export async function PUT(
                             projectName: currentTask.project_title,
                             updatedBy: user.name || user.email,
                             updatedById: user.id,
-                            changes: 'Tâche mise à jour',
+                            changes: changeMessage,
                         });
                     }
                 }

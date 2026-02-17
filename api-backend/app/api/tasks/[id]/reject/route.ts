@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission } from '@/lib/permissions';
-import { sendTaskUpdateEmail, sendSMS, sendWhatsApp } from '@/lib/email';
+import { sendTaskUpdateEmail, sendSMS, sendWhatsApp, getManagersAndAdmins } from '@/lib/email';
 import { createActivityLog } from '@/lib/activity-logger';
 
 export async function OPTIONS(request: NextRequest) {
@@ -159,12 +159,38 @@ export async function POST(
                 try {
                     await sendWhatsApp({
                         to: manager.phone,
-                        message: `❌ *Tâche refusée*\n\n📋 Tâche: ${task.title}\n👤 Refusée par: ${user.name || user.email}\n📂 Projet: ${project.title}\n� Raison: ${reason.trim()}`
+                        message: `❌ *Tâche refusée*\n\n📋 Tâche: ${task.title}\n👤 Refusée par: ${user.name || user.email}\n📂 Projet: ${project.title}\n📝 Raison: ${reason.trim()}`
                     });
                 } catch (error) {
                     console.error('Error sending WhatsApp to manager:', error);
                 }
             }
+        }
+
+        // Notify all admins and managers
+        try {
+            const managersAndAdmins = await getManagersAndAdmins();
+            for (const adminManager of managersAndAdmins) {
+                // Skip if it's the same user who rejected the task or the project manager (already notified)
+                if (adminManager.id !== userId && adminManager.id !== project.manager_id) {
+                    try {
+                        await sendTaskUpdateEmail({
+                            to: adminManager.email,
+                            recipientId: adminManager.id,
+                            recipientName: adminManager.name || 'Admin/Manager',
+                            taskTitle: task.title,
+                            taskId: taskId,
+                            projectName: project.title,
+                            updatedBy: user.name || user.email,
+                            changes: `Tâche refusée par ${user.name || user.email}. Raison: ${reason.trim()}`
+                        });
+                    } catch (error) {
+                        console.error('Error sending email to admin/manager:', error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error getting managers and admins:', error);
         }
 
         return corsResponse({

@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission } from '@/lib/permissions';
-import { sendTaskUpdateEmail, sendSMS, sendWhatsApp } from '@/lib/email';
+import { sendTaskUpdateEmail, sendSMS, sendWhatsApp, getManagersAndAdmins } from '@/lib/email';
 import { createActivityLog } from '@/lib/activity-logger';
 
 export async function OPTIONS(request: NextRequest) {
@@ -61,10 +61,10 @@ export async function POST(
             [taskId, userId]
         );
 
-        // Update task status to IN_PROGRESS
+        // Update task status to IN_PROGRESS if at least one person accepted
         await db.query(
-            'UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2',
-            ['IN_PROGRESS', taskId]
+            'UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3',
+            ['IN_PROGRESS', taskId, 'TODO']
         );
 
         // Get user and task details for notifications
@@ -148,6 +148,32 @@ export async function POST(
                     console.error('Error sending WhatsApp to manager:', error);
                 }
             }
+        }
+
+        // Notify all admins and managers
+        try {
+            const managersAndAdmins = await getManagersAndAdmins();
+            for (const adminManager of managersAndAdmins) {
+                // Skip if it's the same user who accepted the task or the project manager (already notified)
+                if (adminManager.id !== userId && adminManager.id !== project.manager_id) {
+                    try {
+                        await sendTaskUpdateEmail({
+                            to: adminManager.email,
+                            recipientId: adminManager.id,
+                            recipientName: adminManager.name || 'Admin/Manager',
+                            taskTitle: task.title,
+                            taskId: taskId,
+                            projectName: project.title,
+                            updatedBy: user.name || user.email,
+                            changes: `Tâche acceptée par ${user.name || user.email} et mise en cours`
+                        });
+                    } catch (error) {
+                        console.error('Error sending email to admin/manager:', error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error getting managers and admins:', error);
         }
 
         return corsResponse({
