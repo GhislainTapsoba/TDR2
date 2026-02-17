@@ -109,6 +109,29 @@ services:
       createbuckets:
         condition: service_completed_successfully
 
+  # Play SMS Service
+  play-sms:
+    image: playsms/playsms:latest
+    container_name: play-sms
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - play-sms-data:/var/www/html
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.7
+    restart: unless-stopped
+    environment:
+      - DB_TYPE=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB:-deep-db}
+      - DB_USER=${POSTGRES_USER:-deep-user}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Frontend
   web-frontend:
     build:
@@ -145,4 +168,6 @@ volumes:
   postgres-data:
     driver: local
   minio-data:
+    driver: local
+  play-sms-data:
     driver: local
