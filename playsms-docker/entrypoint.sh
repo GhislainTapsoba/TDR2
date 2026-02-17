@@ -2,7 +2,6 @@
 set -e
 
 PLAYSMS_SRC="/usr/local/src/playsms"
-PLAYSMS_WEB="/home/playsms/web"
 INSTALL_DONE_FLAG="/home/playsms/.installed"
 
 # Wait for MariaDB to be ready
@@ -24,34 +23,33 @@ if [ ! -f "${INSTALL_DONE_FLAG}" ]; then
     # Create install.conf from template
     cp install.conf.dist install.conf
 
-    # Patch install.conf with environment values
-    sed -i "s|^DBHOST=.*|DBHOST=${PLAYSMS_DB_HOST}|"     install.conf
-    sed -i "s|^DBPORT=.*|DBPORT=${PLAYSMS_DB_PORT}|"     install.conf
-    sed -i "s|^DBNAME=.*|DBNAME=${PLAYSMS_DB_NAME}|"     install.conf
-    sed -i "s|^DBUSER=.*|DBUSER=${PLAYSMS_DB_USER}|"     install.conf
-    sed -i "s|^DBPASS=.*|DBPASS=${PLAYSMS_DB_PASS}|"     install.conf
+    # Inject environment values into install.conf
+    sed -i "s|^DBHOST=.*|DBHOST=${PLAYSMS_DB_HOST}|"                   install.conf
+    sed -i "s|^DBPORT=.*|DBPORT=${PLAYSMS_DB_PORT}|"                   install.conf
+    sed -i "s|^DBNAME=.*|DBNAME=${PLAYSMS_DB_NAME}|"                   install.conf
+    sed -i "s|^DBUSER=.*|DBUSER=${PLAYSMS_DB_USER}|"                   install.conf
+    sed -i "s|^DBPASS=.*|DBPASS=${PLAYSMS_DB_PASS}|"                   install.conf
     sed -i "s|^ADMINPASSWORD=.*|ADMINPASSWORD=${WEB_ADMIN_PASSWORD:-changemeplease}|" install.conf
+    sed -i "s|^PATHWEB=.*|PATHWEB=/home/playsms/web|"                  install.conf
+    sed -i "s|^PATHLIB=.*|PATHLIB=/home/playsms/lib|"                  install.conf
+    sed -i "s|^PATHBIN=.*|PATHBIN=/home/playsms/bin|"                  install.conf
+    sed -i "s|^PATHLOG=.*|PATHLOG=/home/playsms/log|"                  install.conf
+    sed -i "s|^PATHSTR=.*|PATHSTR=/home/playsms/etc|"                  install.conf
+    sed -i "s|^WEBSERVERUSER=.*|WEBSERVERUSER=www-data|"               install.conf
+    sed -i "s|^WEBSERVERGROUP=.*|WEBSERVERGROUP=www-data|"             install.conf
 
-    # Set paths to match our directory layout
-    sed -i "s|^PATHLIB=.*|PATHLIB=/home/playsms/lib|"    install.conf
-    sed -i "s|^PATHWEB=.*|PATHWEB=/home/playsms/web|"    install.conf
-    sed -i "s|^PATHBIN=.*|PATHBIN=/home/playsms/bin|"    install.conf
-    sed -i "s|^PATHLOG=.*|PATHLOG=/home/playsms/log|"    install.conf
-    sed -i "s|^PATHSTR=.*|PATHSTR=/home/playsms/etc|"    install.conf
+    # Enable bypass mode so the script runs non-interactively
+    sed -i 's/^bypass=.*/bypass=true/' install-playsms.sh
 
-    # Run official install script
-    bash install.sh
-
-    # Fix permissions for Apache
-    chown -R www-data:www-data /home/playsms/web /home/playsms/log /home/playsms/lib
-    chmod -R 775 /home/playsms
+    bash install-playsms.sh
 
     touch "${INSTALL_DONE_FLAG}"
     echo "PlaySMS installation complete."
 else
-    echo "PlaySMS already installed, skipping installation."
+    echo "PlaySMS already installed, skipping."
 fi
 
 # Start Apache in foreground
 echo "Starting Apache..."
-apache2ctl -D FOREGROUND
+source /etc/apache2/envvars
+exec /usr/sbin/apache2 -D FOREGROUND
