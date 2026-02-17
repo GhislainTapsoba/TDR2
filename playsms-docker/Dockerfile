@@ -2,7 +2,6 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install all dependencies
 RUN apt-get update && apt-get install -y \
     apache2 \
     php \
@@ -16,23 +15,16 @@ RUN apt-get update && apt-get install -y \
     libapache2-mod-php \
     git \
     curl \
+    unzip \
     default-mysql-client \
-    cron \
-    net-tools \
-    procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Create playsms user and directories
-RUN useradd -m -s /bin/bash playsms && \
-    mkdir -p /home/playsms/web \
-    /home/playsms/lib \
-    /home/playsms/bin \
-    /home/playsms/log \
-    /home/playsms/etc && \
-    chown -R playsms:playsms /home/playsms
-
-# Clone PlaySMS 1.4.x source at BUILD time (no network dependency at runtime)
+# Clone PlaySMS source at BUILD time (not runtime)
 RUN git clone -b 1.4.x https://github.com/playsms/playsms.git /usr/local/src/playsms
+
+# Pre-install Composer dependencies at build time too
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+    cd /usr/local/src/playsms && composer update --no-interaction
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -40,8 +32,8 @@ RUN a2enmod rewrite
 # Configure Apache VirtualHost
 RUN printf '<VirtualHost *:80>\n\
     ServerName localhost\n\
-    DocumentRoot /home/playsms/web\n\
-    <Directory /home/playsms/web>\n\
+    DocumentRoot /var/www/playsms\n\
+    <Directory /var/www/playsms>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\

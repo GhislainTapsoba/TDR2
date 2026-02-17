@@ -1,47 +1,75 @@
 #!/bin/bash
 set -e
 
-PLAYSMS_SRC="/usr/local/src/playsms"
-INSTALL_DONE_FLAG="/home/playsms/.installed"
+SRC="/usr/local/src/playsms"
+PATHWEB="/var/www/playsms"
+PATHLIB="/var/lib/playsms"
+PATHBIN="/usr/local/bin"
+PATHLOG="/var/log/playsms"
+PATHCONF="/etc/playsms"
+INSTALL_DONE_FLAG="/etc/playsms/.installed"
 
-# Wait for MariaDB to be ready
+# ── Wait for MariaDB ──────────────────────────────────────────────────────────
 echo "Waiting for MariaDB at ${PLAYSMS_DB_HOST}:${PLAYSMS_DB_PORT}..."
 until mysql -h"${PLAYSMS_DB_HOST}" -P"${PLAYSMS_DB_PORT}" \
             -u"${PLAYSMS_DB_USER}" -p"${PLAYSMS_DB_PASS}" \
             "${PLAYSMS_DB_NAME}" -e "SELECT 1" > /dev/null 2>&1; do
-    echo "  MariaDB not ready yet, retrying in 3s..."
+    echo "  Not ready, retrying in 3s..."
     sleep 3
 done
 echo "MariaDB is ready."
 
-# Run PlaySMS installation only once
+# ── Install (only once) ───────────────────────────────────────────────────────
 if [ ! -f "${INSTALL_DONE_FLAG}" ]; then
-    echo "Running PlaySMS installation..."
+    echo "Installing PlaySMS..."
 
-    cd "${PLAYSMS_SRC}"
+    # Create directories
+    mkdir -p "${PATHWEB}" "${PATHLIB}" "${PATHLOG}" "${PATHCONF}"
 
-    # Create install.conf from template
-    cp install.conf.dist install.conf
+    # Copy web files
+    cp -R "${SRC}/web/." "${PATHWEB}/"
 
-    # Inject environment values into install.conf
-    sed -i "s|^DBHOST=.*|DBHOST=${PLAYSMS_DB_HOST}|"                   install.conf
-    sed -i "s|^DBPORT=.*|DBPORT=${PLAYSMS_DB_PORT}|"                   install.conf
-    sed -i "s|^DBNAME=.*|DBNAME=${PLAYSMS_DB_NAME}|"                   install.conf
-    sed -i "s|^DBUSER=.*|DBUSER=${PLAYSMS_DB_USER}|"                   install.conf
-    sed -i "s|^DBPASS=.*|DBPASS=${PLAYSMS_DB_PASS}|"                   install.conf
-    sed -i "s|^ADMINPASSWORD=.*|ADMINPASSWORD=${WEB_ADMIN_PASSWORD:-changemeplease}|" install.conf
-    sed -i "s|^PATHWEB=.*|PATHWEB=/home/playsms/web|"                  install.conf
-    sed -i "s|^PATHLIB=.*|PATHLIB=/home/playsms/lib|"                  install.conf
-    sed -i "s|^PATHBIN=.*|PATHBIN=/home/playsms/bin|"                  install.conf
-    sed -i "s|^PATHLOG=.*|PATHLOG=/home/playsms/log|"                  install.conf
-    sed -i "s|^PATHSTR=.*|PATHSTR=/home/playsms/etc|"                  install.conf
-    sed -i "s|^WEBSERVERUSER=.*|WEBSERVERUSER=www-data|"               install.conf
-    sed -i "s|^WEBSERVERGROUP=.*|WEBSERVERGROUP=www-data|"             install.conf
+    # Copy lib files
+    cp -R "${SRC}/storage/." "${PATHLIB}/"
 
-    # Enable bypass mode so the script runs non-interactively
-    sed -i 's/^bypass=.*/bypass=true/' install-playsms.sh
+    # Import database schema
+    echo "Importing database schema..."
+    mysql -h"${PLAYSMS_DB_HOST}" -P"${PLAYSMS_DB_PORT}" \
+          -u"${PLAYSMS_DB_USER}" -p"${PLAYSMS_DB_PASS}" \
+          "${PLAYSMS_DB_NAME}" < "${SRC}/db/playsms.sql"
 
-    bash install-playsms.sh
+    # Configure config.php from template (tokens are #DBHOST# etc.)
+    cp "${PATHWEB}/config-dist.php" "${PATHWEB}/config.php"
+    sed -i "s|#DBHOST#|${PLAYSMS_DB_HOST}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#DBPORT#|${PLAYSMS_DB_PORT}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#DBNAME#|${PLAYSMS_DB_NAME}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#DBUSER#|${PLAYSMS_DB_USER}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#DBPASS#|${PLAYSMS_DB_PASS}|g"  "${PATHWEB}/config.php"
+    sed -i "s|#PATHLOG#|${PATHLOG}|g"         "${PATHWEB}/config.php"
+
+    # Configure playsmsd daemon
+    cp "${SRC}/daemon/linux/etc/playsmsd.conf" "${PATHCONF}/playsmsd.conf"
+    sed -i "s|PLAYSMS_PATH=.*|PLAYSMS_PATH=\"${PATHWEB}\"|"   "${PATHCONF}/playsmsd.conf"
+    sed -i "s|PLAYSMS_LIB=.*|PLAYSMS_LIB=\"${PATHLIB}\"|"    "${PATHCONF}/playsmsd.conf"
+    sed -i "s|PLAYSMS_BIN=.*|PLAYSMS_BIN=\"${PATHBIN}\"|"    "${PATHCONF}/playsmsd.conf"
+    sed -i "s|PLAYSMS_LOG=.*|PLAYSMS_LOG=\"${PATHLOG}\"|"    "${PATHCONF}/playsmsd.conf"
+
+    # Install playsmsd daemon binary
+    cp "${SRC}/daemon/linux/bin/playsmsd.php" "${PATHBIN}/playsmsd"
+    chmod +x "${PATHBIN}/playsmsd"
+
+    # Set admin password in DB
+    ADMIN_PASS="${WEB_ADMIN_PASSWORD:-changemeplease}"
+    ADMIN_PASS_MD5=$(echo -n "${ADMIN_PASS}" | md5sum | awk '{print $1}')
+    mysql -h"${PLAYSMS_DB_HOST}" -P"${PLAYSMS_DB_PORT}" \
+          -u"${PLAYSMS_DB_USER}" -p"${PLAYSMS_DB_PASS}" \
+          "${PLAYSMS_DB_NAME}" \
+          -e "UPDATE playsms_user SET u_pass='${ADMIN_PASS_MD5}' WHERE u_username='admin';" \
+          2>/dev/null || true
+
+    # Fix permissions
+    chown -R www-data:www-data "${PATHWEB}" "${PATHLIB}" "${PATHLOG}"
+    chmod -R 755 "${PATHWEB}"
 
     touch "${INSTALL_DONE_FLAG}"
     echo "PlaySMS installation complete."
@@ -49,7 +77,11 @@ else
     echo "PlaySMS already installed, skipping."
 fi
 
-# Start Apache in foreground
+# ── Start playsmsd daemon ─────────────────────────────────────────────────────
+echo "Starting playsmsd..."
+sudo -u www-data "${PATHBIN}/playsmsd" "${PATHCONF}/playsmsd.conf" start 2>/dev/null || true
+
+# ── Start Apache in foreground ────────────────────────────────────────────────
 echo "Starting Apache..."
 source /etc/apache2/envvars
 exec /usr/sbin/apache2 -D FOREGROUND
