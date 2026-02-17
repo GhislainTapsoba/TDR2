@@ -71,7 +71,7 @@ export default function UserDetailPage() {
 
     const handleToggleActive = async () => {
         if (!user) return;
-        
+
         try {
             await usersAPI.update(userId, { is_active: !user.is_active });
             loadUser();
@@ -83,16 +83,28 @@ export default function UserDetailPage() {
 
     const handleDelete = async () => {
         if (!user) return;
-        
+
         if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${user.name || user.email}" ? Cette action est irréversible.`)) {
             return;
         }
 
         try {
             await usersAPI.delete(userId);
+            alert('Utilisateur supprimé avec succès');
             router.push('/users');
         } catch (error: any) {
-            setError(error.response?.data?.error || 'Erreur lors de la suppression');
+            console.error('Delete error:', error);
+            const errorMessage = error.response?.data?.error || 'Erreur lors de la suppression';
+            setError(errorMessage);
+
+            // Si l'erreur est liée aux permissions, l'afficher clairement
+            if (errorMessage.includes('Non autorisé') || errorMessage.includes('permission')) {
+                setError('Vous n\'avez pas les permissions nécessaires pour supprimer cet utilisateur');
+            } else if (errorMessage.includes('propre compte')) {
+                setError('Vous ne pouvez pas supprimer votre propre compte');
+            } else if (errorMessage.includes('tâches assignées') || errorMessage.includes('projets gérés')) {
+                setError('Impossible de supprimer cet utilisateur : il a des tâches assignées ou des projets gérés');
+            }
         }
     };
 
@@ -177,18 +189,18 @@ export default function UserDetailPage() {
                                 </button>
                                 <button
                                     onClick={handleToggleActive}
-                                    className={`px-4 py-2 rounded-lg ${
-                                        user.is_active 
-                                            ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-                                            : 'bg-green-600 text-white hover:bg-green-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded-lg ${user.is_active
+                                        ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                                        : 'bg-green-600 text-white hover:bg-green-700'
+                                        }`}
                                 >
                                     {user.is_active ? 'Désactiver' : 'Activer'}
                                 </button>
                                 <button
                                     onClick={handleDelete}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                     disabled={user.id === currentUser?.id}
+                                    title={user.id === currentUser?.id ? "Vous ne pouvez pas supprimer votre propre compte" : ""}
                                 >
                                     Supprimer
                                 </button>
@@ -234,11 +246,10 @@ export default function UserDetailPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Statut
                                 </label>
-                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    user.is_active
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                }`}>
+                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_active
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                    }`}>
                                     {user.is_active ? 'Actif' : 'Inactif'}
                                 </span>
                             </div>

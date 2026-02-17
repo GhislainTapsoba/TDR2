@@ -145,23 +145,6 @@ export async function DELETE(
             return corsResponse({ error: 'Vous ne pouvez pas supprimer votre propre compte' }, request, { status: 400 });
         }
 
-        // Check if user has active tasks or projects
-        const { rows: activeTasks } = await db.query(
-            'SELECT COUNT(*) as count FROM task_assignees WHERE user_id = $1',
-            [id]
-        );
-
-        const { rows: managedProjects } = await db.query(
-            'SELECT COUNT(*) as count FROM projects WHERE manager_id = $1',
-            [id]
-        );
-
-        if (parseInt(activeTasks[0].count) > 0 || parseInt(managedProjects[0].count) > 0) {
-            return corsResponse({
-                error: 'Impossible de supprimer cet utilisateur. Il a des tâches assignées ou des projets gérés.'
-            }, request, { status: 400 });
-        }
-
         // Soft delete: deactivate user
         await db.query(
             'UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1',

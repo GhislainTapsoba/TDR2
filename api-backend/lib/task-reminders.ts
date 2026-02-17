@@ -323,13 +323,13 @@ ${statusEmoji} *Rappel de tâche - ${statusText}*
     `.trim();
 }
 
-// Schedule to run every hour
+// Schedule to run every 6 hours
 export function scheduleTaskReminders(): void {
     // Run immediately
     sendTaskReminders();
 
-    // Then run every hour
-    setInterval(sendTaskReminders, 60 * 60 * 1000);
+    // Then run every 6 hours
+    setInterval(sendTaskReminders, 6 * 60 * 60 * 1000);
 
-    console.log('📅 Task reminders scheduled to run every hour');
+    console.log('📅 Task reminders scheduled to run every 6 hours');
 }

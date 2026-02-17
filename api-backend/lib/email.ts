@@ -100,25 +100,19 @@ export async function sendSMS(options: SMSOptions): Promise<void> {
       return;
     }
 
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64')}`,
-        },
-        body: new URLSearchParams({
-          From: TWILIO_PHONE_NUMBER,
-          To: options.to,
-          Body: options.message,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Twilio SMS error: ${response.statusText}`);
+    const client = getTwilioClient();
+    if (!client) {
+      throw new Error('Failed to initialize Twilio client');
     }
+
+    const message = await client.messages.create({
+      from: TWILIO_PHONE_NUMBER,
+      to: options.to,
+      body: options.message,
+    });
+
+    console.log('SMS sent successfully to:', options.to);
+    console.log('SMS SID:', message.sid);
 
     await db.query(
       `INSERT INTO sms_logs (recipient, message, sent_at, status) VALUES ($1, $2, NOW(), 'sent')`,
