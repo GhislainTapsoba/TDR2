@@ -70,7 +70,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      HOSTNAME: 0.0.0.0 # ✅ AJOUTÉ : Force Next.js à écouter sur toutes les interfaces
+      HOSTNAME: 0.0.0.0
       DATABASE_URL: postgresql://${POSTGRES_USER:-deep-user}:${POSTGRES_PASSWORD:-deep-projet}@postgres:5432/${POSTGRES_DB:-deep-db}
       JWT_SECRET: ${JWT_SECRET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -92,7 +92,6 @@ services:
       app-network:
         ipv4_address: 172.19.0.4
     healthcheck:
-      # Vérifie que le port 3000 est en écoute
       test: [ "CMD", "sh", "-c", "netstat -tlnp | grep :3000 || exit 1" ]
       interval: 30s
       timeout: 10s
@@ -107,30 +106,30 @@ services:
       createbuckets:
         condition: service_completed_successfully
 
-  # MySQL for Play SMS
-  mysql-play-sms:
-    image: mysql:8.0
-    container_name: mysql-play-sms
+  # MariaDB for Play SMS
+  mariadb-play-sms:
+    image: mariadb:lts
+    container_name: mariadb-play-sms
     environment:
       MYSQL_ROOT_PASSWORD: play-sms-root
       MYSQL_DATABASE: playsms
       MYSQL_USER: playsms
       MYSQL_PASSWORD: play-sms
     volumes:
-      - mysql-play-sms-data:/var/lib/mysql
+      - mariadb-play-sms-data:/var/lib/mysql
     networks:
       app-network:
         ipv4_address: 172.19.0.8
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "playsms", "-pplay-sms" ]
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # Play SMS Service
   play-sms:
-    image: yulrizki/playsms:latest
+    image: playsms/playsms:1.4.x
     container_name: play-sms
     ports:
       - "127.0.0.1:8080:80"
@@ -141,13 +140,14 @@ services:
         ipv4_address: 172.19.0.7
     restart: unless-stopped
     environment:
-      - MYSQL_HOST=mysql-play-sms
-      - MYSQL_PORT=3306
-      - MYSQL_DATABASE=playsms
-      - MYSQL_USER=playsms
-      - MYSQL_PASSWORD=play-sms
+      - PLAYSMS_DB_HOST=mariadb-play-sms
+      - PLAYSMS_DB_PORT=3306
+      - PLAYSMS_DB_NAME=playsms
+      - PLAYSMS_DB_USER=playsms
+      - PLAYSMS_DB_PASS=play-sms
+      - WEB_ADMIN_PASSWORD=changemeplease
     depends_on:
-      mysql-play-sms:
+      mariadb-play-sms:
         condition: service_healthy
 
   # Frontend
@@ -160,7 +160,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      HOSTNAME: 0.0.0.0 # ✅ AJOUTÉ : Bonne pratique pour le frontend aussi
+      HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_URL: https://teamproject.deep-technologies.com/api
       INTERNAL_API_URL: http://127.0.0.1:3000/api
       NEXTAUTH_URL: https://teamproject.deep-technologies.com
@@ -189,5 +189,5 @@ volumes:
     driver: local
   play-sms-data:
     driver: local
-  mysql-play-sms-data:
+  mariadb-play-sms-data:
     driver: local
