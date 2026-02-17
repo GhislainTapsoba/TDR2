@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # PostgreSQL Database
   postgres:
@@ -132,7 +130,7 @@ services:
 
   # Play SMS Service
   play-sms:
-    image: playsms/playsms:latest
+    image: playsms/playsms:1.4
     container_name: play-sms
     ports:
       - "127.0.0.1:8080:80"
@@ -143,11 +141,11 @@ services:
         ipv4_address: 172.19.0.7
     restart: unless-stopped
     environment:
+      - MYSQL_HOST=mysql-play-sms
+      - MYSQL_PORT=3306
       - MYSQL_DATABASE=playsms
       - MYSQL_USER=playsms
       - MYSQL_PASSWORD=play-sms
-      - MYSQL_HOST=mysql-play-sms
-      - MYSQL_PORT=3306
     depends_on:
       mysql-play-sms:
         condition: service_healthy
