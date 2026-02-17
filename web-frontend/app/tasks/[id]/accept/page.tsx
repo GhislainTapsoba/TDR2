@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AcceptTaskPage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +11,7 @@ export default function AcceptTaskPage({ params }: { params: Promise<{ id: strin
     const [task, setTask] = useState<any>(null);
     const router = useRouter();
     const { user } = useAuth();
+    const searchParams = useSearchParams();
 
     const [taskId, setTaskId] = useState<string>('');
 
@@ -21,7 +22,12 @@ export default function AcceptTaskPage({ params }: { params: Promise<{ id: strin
 
             const acceptTask = async () => {
                 try {
-                    const response = await fetch(`/api/tasks/${resolvedParams.id}/accept`, {
+                    const token = searchParams.get('token');
+                    if (!token) {
+                        throw new Error('Token de confirmation manquant');
+                    }
+
+                    const response = await fetch(`/api/tasks/${resolvedParams.id}/accept?token=${encodeURIComponent(token)}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -47,7 +53,7 @@ export default function AcceptTaskPage({ params }: { params: Promise<{ id: strin
         };
 
         getTaskId();
-    }, [params]);
+    }, [params, searchParams]);
 
     if (loading) {
         return (

@@ -4,17 +4,25 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { tasksAPI } from '@/lib/api';
 
-export default function TaskRejectPage() {
+export default function TaskRejectPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
-    const taskId = searchParams.get('id') || '';
 
+    const [taskId, setTaskId] = useState<string>('');
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [task, setTask] = useState<any>(null);
+
+    useEffect(() => {
+        const getTaskId = async () => {
+            const resolvedParams = await params;
+            setTaskId(resolvedParams.id);
+        };
+        getTaskId();
+    }, [params]);
 
     useEffect(() => {
         if (!token) {
@@ -32,7 +40,9 @@ export default function TaskRejectPage() {
             }
         };
 
-        fetchTask();
+        if (taskId) {
+            fetchTask();
+        }
     }, [token, taskId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
