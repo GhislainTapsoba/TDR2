@@ -171,12 +171,11 @@ export default function UsersPage() {
                                 <tr key={userItem.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900">
-                                            <Link
-                                                href={`/users/${userItem.id}`}
+                                            <button
                                                 className="text-blue-600 hover:text-blue-800 hover:underline"
                                             >
                                                 {userItem.name || 'Non défini'}
-                                            </Link>
+                                            </button>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -203,22 +202,12 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex space-x-2">
-                                            <button
-                                                onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
-                                                className={`${userItem.is_active
-                                                    ? 'text-red-600 hover:text-red-900'
-                                                    : 'text-green-600 hover:text-green-900'
-                                                    }`}
+                                            <Link
+                                                href={`/users/${userItem.id}`}
+                                                className="text-blue-600 hover:text-blue-800"
                                             >
-                                                {userItem.is_active ? 'Désactiver' : 'Activer'}
-                                            </button>
-                                            <span className="text-gray-300">|</span>
-                                            <button
-                                                onClick={() => handleDeleteUser(userItem.id, userItem.name || userItem.email)}
-                                                className="text-red-600 hover:text-red-900"
-                                            >
-                                                Supprimer
-                                            </button>
+                                                Voir
+                                            </Link>
                                         </div>
                                     </td>
                                 </tr>

@@ -242,13 +242,7 @@ function getReminderEmailHTML(task: TaskReminder, reminderType: string, urgency:
                             <span style="color: ${statusColor}; font-weight: bold;">${statusMessage}</span>
                         </div>
                     </div>
-                    
-                    <div style="text-align: center; margin-top: 25px;">
-                        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${task.taskId}" 
-                           style="background-color: ${urgencyColor}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                           Voir la tâche
-                        </a>
-                    </div>
+                
                 </div>
             </div>
             

@@ -8,6 +8,42 @@ export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
 }
 
+// GET /api/users/[id] - Get a specific user (admin only)
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const user = await verifyAuth(request);
+        if (!user) {
+            return corsResponse({ error: 'Non autorisé' }, request, { status: 401 });
+        }
+
+        const userRole = mapDbRoleToUserRole(user.role);
+        const perm = await requirePermission(userRole, 'users', 'read');
+        if (!perm.allowed) {
+            return corsResponse({ error: perm.error }, request, { status: 403 });
+        }
+
+        const { id } = await params;
+
+        // Get user details
+        const { rows: users } = await db.query(
+            'SELECT id, name, email, role, phone, is_active, created_at, updated_at FROM users WHERE id = $1',
+            [id]
+        );
+
+        if (users.length === 0) {
+            return corsResponse({ error: 'Utilisateur introuvable' }, request, { status: 404 });
+        }
+
+        return corsResponse(users[0], request);
+    } catch (error) {
+        console.error('GET /api/users/[id] error:', error);
+        return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });
+    }
+}
+
 // PUT /api/users/[id] - Update a user (admin only)
 export async function PUT(
     request: NextRequest,
@@ -125,10 +161,6 @@ export async function DELETE(
                 error: 'Impossible de supprimer cet utilisateur. Il a des tâches assignées ou des projets gérés.'
             }, request, { status: 400 });
         }
-
-        // Remove user from all teams and projects
-        await db.query('DELETE FROM team_members WHERE user_id = $1', [id]);
-        await db.query('DELETE FROM project_members WHERE user_id = $1', [id]);
 
         // Soft delete: deactivate user
         await db.query(
