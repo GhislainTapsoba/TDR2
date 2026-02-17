@@ -36,17 +36,25 @@ export async function sendTaskReminders(): Promise<void> {
             WHERE t.status IN ('TODO', 'IN_PROGRESS')
             AND t.due_date IS NOT NULL
             AND (
-                -- Due in 24 hours
-                (t.due_date <= NOW() + INTERVAL '24 hours' AND t.due_date > NOW())
+                -- Due tomorrow (send evening before)
+                (DATE(t.due_date) = DATE(NOW() + INTERVAL '1 day') 
+                 AND EXTRACT(HOUR FROM NOW()) >= 18)
                 OR
-                -- Overdue
-                t.due_date <= NOW()
+                -- Due today (send morning of)
+                (DATE(t.due_date) = DATE(NOW()) 
+                 AND EXTRACT(HOUR FROM NOW()) >= 8 
+                 AND EXTRACT(HOUR FROM NOW()) < 12)
+                OR
+                -- Overdue (send morning of)
+                (t.due_date < NOW() 
+                 AND EXTRACT(HOUR FROM NOW()) >= 8 
+                 AND EXTRACT(HOUR FROM NOW()) < 12)
             )
             AND (
-                -- Only send reminders every 48 hours (2 days) to reduce email frequency
+                -- Only send once per day per task
                 t.id NOT IN (
                     SELECT task_id FROM task_reminders 
-                    WHERE created_at > NOW() - INTERVAL '48 hours'
+                    WHERE DATE(created_at) = DATE(NOW())
                 )
             )
         `;
@@ -83,22 +91,25 @@ export async function sendTaskReminders(): Promise<void> {
 async function sendReminderForTask(task: TaskReminder): Promise<void> {
     const now = new Date();
     const dueDate = new Date(task.dueDate);
-    const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const taskDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
 
-    let reminderType: 'overdue' | 'due_soon' | 'due_very_soon';
+    const daysDiff = Math.ceil((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    let reminderType: 'overdue' | 'due_today' | 'due_tomorrow';
     let urgency: 'low' | 'medium' | 'high' | 'critical';
 
-    if (hoursUntilDue < 0) {
+    if (daysDiff < 0) {
         reminderType = 'overdue';
         urgency = 'critical';
-    } else if (hoursUntilDue <= 2) {
-        reminderType = 'due_very_soon';
+    } else if (daysDiff === 0) {
+        reminderType = 'due_today';
         urgency = 'high';
-    } else if (hoursUntilDue <= 24) {
-        reminderType = 'due_soon';
+    } else if (daysDiff === 1) {
+        reminderType = 'due_tomorrow';
         urgency = 'medium';
     } else {
-        return; // Don't send reminder if more than 24 hours away
+        return; // Don't send reminder if more than 1 day away
     }
 
     console.log(`Sending ${reminderType} reminder for task: ${task.taskTitle}`);
@@ -160,10 +171,10 @@ function getReminderSubject(taskTitle: string, reminderType: string): string {
     switch (reminderType) {
         case 'overdue':
             return `⚠️ TÂCHE EN RETARD: ${taskTitle}`;
-        case 'due_very_soon':
-            return `🔴 TÂCHE DANS 2H: ${taskTitle}`;
-        case 'due_soon':
-            return `🟡 RAPPEL TÂCHE: ${taskTitle}`;
+        case 'due_today':
+            return `🔴 TÂCHE AUJOURD'HUI: ${taskTitle}`;
+        case 'due_tomorrow':
+            return `🟡 TÂCHE DEMAIN: ${taskTitle}`;
         default:
             return `Rappel: ${taskTitle}`;
     }
@@ -267,11 +278,11 @@ function getReminderSMS(task: TaskReminder, reminderType: string, urgency: strin
         case 'overdue':
             message = `⚠️ TÂCHE EN RETARD: ${task.taskTitle}. Échéance: ${dueDate}. Projet: ${task.projectName}. Veuillez compléter cette tâche dès que possible.`;
             break;
-        case 'due_very_soon':
-            message = `🔴 TÂCHE DANS 2H: ${task.taskTitle}. Échéance: ${dueDate}. Projet: ${task.projectName}.`;
+        case 'due_today':
+            message = `🔴 TÂCHE AUJOURD'HUI: ${task.taskTitle}. Échéance: ${dueDate}. Projet: ${task.projectName}.`;
             break;
-        case 'due_soon':
-            message = `🟡 RAPPEL: ${task.taskTitle} due le ${dueDate}. Projet: ${task.projectName}.`;
+        case 'due_tomorrow':
+            message = `🟡 TÂCHE DEMAIN: ${task.taskTitle}. Échéance: ${dueDate}. Projet: ${task.projectName}.`;
             break;
         default:
             message = `Rappel: ${task.taskTitle} due le ${dueDate}.`;
@@ -297,13 +308,13 @@ function getReminderWhatsApp(task: TaskReminder, reminderType: string, urgency: 
             statusEmoji = '⚠️';
             statusText = 'EN RETARD';
             break;
-        case 'due_very_soon':
+        case 'due_today':
             statusEmoji = '🔴';
-            statusText = 'DANS 2 HEURES';
+            statusText = 'AUJOURD\'HUI';
             break;
-        case 'due_soon':
+        case 'due_tomorrow':
             statusEmoji = '🟡';
-            statusText = 'DANS 24 HEURES';
+            statusText = 'DEMAIN';
             break;
     }
 
