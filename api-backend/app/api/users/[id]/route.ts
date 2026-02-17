@@ -126,7 +126,11 @@ export async function DELETE(
             }, request, { status: 400 });
         }
 
-        // Soft delete: deactivate user instead of hard delete
+        // Remove user from all teams and projects
+        await db.query('DELETE FROM team_members WHERE user_id = $1', [id]);
+        await db.query('DELETE FROM project_members WHERE user_id = $1', [id]);
+
+        // Soft delete: deactivate user
         await db.query(
             'UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1',
             [id]

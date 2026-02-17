@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { usersAPI } from '@/lib/api';
 import BackButton from '@/components/BackButton';
@@ -170,7 +171,12 @@ export default function UsersPage() {
                                 <tr key={userItem.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900">
-                                            {userItem.name || 'Non défini'}
+                                            <Link
+                                                href={`/users/${userItem.id}`}
+                                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                                            >
+                                                {userItem.name || 'Non défini'}
+                                            </Link>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -200,8 +206,8 @@ export default function UsersPage() {
                                             <button
                                                 onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
                                                 className={`${userItem.is_active
-                                                        ? 'text-red-600 hover:text-red-900'
-                                                        : 'text-green-600 hover:text-green-900'
+                                                    ? 'text-red-600 hover:text-red-900'
+                                                    : 'text-green-600 hover:text-green-900'
                                                     }`}
                                             >
                                                 {userItem.is_active ? 'Désactiver' : 'Activer'}
