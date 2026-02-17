@@ -129,12 +129,12 @@ services:
 
   # Play SMS Service
   play-sms:
-    image: playsms/playsms:1.4.x
+    build:
+      context: ./playsms-docker
+      dockerfile: Dockerfile
     container_name: play-sms
     ports:
       - "127.0.0.1:8080:80"
-    volumes:
-      - play-sms-data:/var/www/html
     networks:
       app-network:
         ipv4_address: 172.19.0.7
@@ -145,7 +145,6 @@ services:
       - PLAYSMS_DB_NAME=playsms
       - PLAYSMS_DB_USER=playsms
       - PLAYSMS_DB_PASS=play-sms
-      - WEB_ADMIN_PASSWORD=changemeplease
     depends_on:
       mariadb-play-sms:
         condition: service_healthy
@@ -186,8 +185,6 @@ volumes:
   postgres-data:
     driver: local
   minio-data:
-    driver: local
-  play-sms-data:
     driver: local
   mariadb-play-sms-data:
     driver: local
