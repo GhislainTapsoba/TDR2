@@ -30,13 +30,19 @@ export default function TaskRejectPage({ params }: { params: Promise<{ id: strin
             return;
         }
 
-        // Fetch task details
+        // Fetch task details (API publique pour le refus)
         const fetchTask = async () => {
             try {
-                const response = await tasksAPI.getById(taskId);
-                setTask(response.data);
+                const response = await fetch(`/api/tasks/${taskId}/public?token=${token}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erreur lors du chargement de la tâche');
+                }
+
+                setTask(data);
             } catch (err: any) {
-                setError(err.response?.data?.error || 'Erreur lors du chargement de la tâche');
+                setError(err.message || 'Erreur lors du chargement de la tâche');
             }
         };
 
