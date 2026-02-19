@@ -15,8 +15,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [hasError, setHasError] = useState(false);
 
   // Pages where sidebar should not be shown
-  const noSidebarPages = ['/login', '/register', '/tasks/[id]/reject', '/tasks/[id]/accept'];
+  const noSidebarPages = ['/login', '/register'];
   const showSidebar = !noSidebarPages.includes(pathname);
+
+  // Check if current page is a public task action page (accept/reject)
+  const isPublicTaskAction = pathname.match(/^\/tasks\/[^\/]+\/(accept|reject)$/);
 
   // Error boundary
   if (hasError) {
@@ -36,8 +39,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Redirect if not authenticated (except for login/register pages)
-  if (!isLoading && !user && !noSidebarPages.includes(pathname)) {
+  // Redirect if not authenticated (except for login/register pages and public task actions)
+  if (!isLoading && !user && !noSidebarPages.includes(pathname) && !isPublicTaskAction) {
     router.push('/login');
     return null;
   }
