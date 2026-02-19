@@ -152,6 +152,9 @@ export async function PUT(
         const updatedTask = updatedRows[0];
 
         // Handle assignee changes
+        let newAssigneeIds: string[] = [];
+        let removedAssigneeIds: string[] = [];
+
         if (assignee_ids && Array.isArray(assignee_ids)) {
             // Get current assignees
             const { rows: currentAssignees } = await db.query(
@@ -161,10 +164,10 @@ export async function PUT(
             const currentAssigneeIds = currentAssignees.map(a => a.user_id);
 
             // Find new assignees
-            const newAssigneeIds = assignee_ids.filter(id => !currentAssigneeIds.includes(id));
+            newAssigneeIds = assignee_ids.filter(id => !currentAssigneeIds.includes(id));
 
             // Remove old assignees
-            const removedAssigneeIds = currentAssigneeIds.filter(id => !assignee_ids.includes(id));
+            removedAssigneeIds = currentAssigneeIds.filter(id => !assignee_ids.includes(id));
 
             // Delete removed assignees
             if (removedAssigneeIds.length > 0) {
