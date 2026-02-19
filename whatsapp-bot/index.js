@@ -2,6 +2,8 @@ const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLat
 const express = require('express');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -11,7 +13,32 @@ let qrCode = null;
 let isConnected = false;
 let isConnecting = false;
 
-const logger = pino({ level: 'info' });
+// Configuration du logger avec rotation
+const logger = pino({
+    level: 'info',
+    transport: {
+        target: 'pino/file',
+        options: {
+            destination: path.join(__dirname, 'logs', 'whatsapp.log'),
+            mkdir: true
+        }
+    }
+});
+
+// Fonction de sauvegarde des crédits
+function backupCredentials() {
+    try {
+        const authPath = path.join(__dirname, 'auth_info');
+        const backupPath = path.join(__dirname, 'logs', `auth_backup_${Date.now()}`);
+
+        if (fs.existsSync(authPath)) {
+            fs.cpSync(authPath, backupPath, { recursive: true });
+            logger.info('Credentials backed up to:', backupPath);
+        }
+    } catch (error) {
+        logger.error('Error backing up credentials:', error);
+    }
+}
 
 async function connectToWhatsApp() {
     if (isConnecting) {
@@ -73,9 +100,14 @@ async function connectToWhatsApp() {
             } else if (connection === 'open') {
                 console.log('\n✅ WhatsApp connected successfully!');
                 console.log('Phone number:', sock.user?.id);
+                logger.info('WhatsApp connected successfully', { user: sock.user?.id });
+
                 isConnected = true;
                 qrCode = null;
                 isConnecting = false;
+
+                // Sauvegarder les crédits après connexion réussie
+                backupCredentials();
             } else if (connection === 'connecting') {
                 console.log('Connecting to WhatsApp...');
             }
@@ -108,10 +140,31 @@ async function connectToWhatsApp() {
 
 // REST API endpoints
 app.get('/status', (req, res) => {
+    const authPath = path.join(__dirname, 'auth_info');
+    const logsPath = path.join(__dirname, 'logs');
+
+    let authExists = false;
+    let backupCount = 0;
+
+    try {
+        authExists = fs.existsSync(authPath);
+        if (fs.existsSync(logsPath)) {
+            const backups = fs.readdirSync(logsPath).filter(f => f.startsWith('auth_backup_'));
+            backupCount = backups.length;
+        }
+    } catch (error) {
+        console.error('Error checking persistence:', error);
+    }
+
     res.json({
         connected: isConnected,
         hasQR: qrCode !== null,
-        user: sock?.user || null
+        user: sock?.user || null,
+        persistence: {
+            authExists,
+            backupCount,
+            lastBackup: backupCount > 0 ? 'Available' : 'None'
+        }
     });
 });
 

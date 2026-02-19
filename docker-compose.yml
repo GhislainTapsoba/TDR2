@@ -9,6 +9,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./api-backend/supabase/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backups:/backups
     networks:
       app-network:
         ipv4_address: 172.19.0.2
@@ -19,7 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    restart: always
 
   # MinIO S3-compatible Storage
   minio:
@@ -117,12 +118,58 @@ services:
       - "127.0.0.1:3002:3002"
     volumes:
       - whatsapp-auth:/app/auth_info
+      - ./whatsapp-bot/logs:/app/logs
     networks:
       app-network:
         ipv4_address: 172.19.0.9
-    restart: unless-stopped
+    restart: always
     environment:
       - PORT=3002
+      - NODE_ENV=production
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3002/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Database Backup Service
+  db-backup:
+    image: postgres:15-alpine
+    container_name: db-backup
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:ro
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.10
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-deep-db}
+      - POSTGRES_USER=${POSTGRES_USER:-deep-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-deep-projet}
+      - POSTGRES_HOST=postgres
+      - BACKUP_RETENTION_DAYS=7
+    command: >
+      sh -c "
+        echo 'Setting up database backup service...';
+        chmod +x /backup.sh;
+        
+        # Créer un backup toutes les 6 heures
+        while true; do
+          echo 'Starting backup at $$(date)';
+          /backup.sh;
+          echo 'Backup completed. Next backup in 6 hours.';
+          sleep 21600; # 6 heures en secondes
+        done
+      "
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # Frontend
   web-frontend:
