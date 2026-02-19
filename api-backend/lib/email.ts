@@ -477,7 +477,7 @@ export async function sendTaskAssignmentEmail(data: {
     const subject = `Nouvelle tâche assignée: ${data.taskTitle}`;
     const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001';
     const acceptUrl = `${frontendUrl}/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
-    const rejectUrl = `${frontendUrl}/tasks/${data.taskId}/reject?token=${data.rejectionToken}`;
+    const rejectUrl = `${frontendUrl}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`; // Utiliser le confirmationToken pour le lien de refus temporairement
     const todayFormatted = new Date().toLocaleDateString('fr-FR');
 
     const employeeHtml = `
