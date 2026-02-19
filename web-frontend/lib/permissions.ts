@@ -54,6 +54,11 @@ export const pagePermissions: PagePermission[] = [
     description: 'Étapes'
   },
   {
+    path: '/stages/create',
+    requiredRole: ['admin', 'manager'],
+    description: 'Création d\'étape'
+  },
+  {
     path: '/activity',
     requiredRole: ['admin', 'manager'],
     description: 'Activité'
