@@ -15,7 +15,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [hasError, setHasError] = useState(false);
 
   // Pages where sidebar should not be shown
-  const noSidebarPages = ['/login', '/register'];
+  const noSidebarPages = ['/login', '/register', '/tasks/[id]/reject', '/tasks/[id]/accept'];
   const showSidebar = !noSidebarPages.includes(pathname);
 
   // Error boundary
