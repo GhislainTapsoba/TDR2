@@ -12,7 +12,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [formData, setFormData] = useState({ name: '', email: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -42,6 +42,7 @@ export default function ProfilePage() {
             setFormData({
                 name: response.data.name || '',
                 email: response.data.email || '',
+                phone: response.data.phone || '',
             });
         } catch (error) {
             console.error('Error loading profile:', error);
@@ -207,6 +208,10 @@ export default function ProfilePage() {
                             <span className="text-gray-500">Membre depuis:</span>
                             <span className="ml-2 font-medium">{new Date(profile.created_at).toLocaleDateString()}</span>
                         </div>
+                        <div>
+                            <span className="text-gray-500">Téléphone:</span>
+                            <span className="ml-2 font-medium">{profile.phone || 'Non défini'}</span>
+                        </div>
                     </div>
 
                     <form onSubmit={handleSave} className="space-y-4">
@@ -228,6 +233,18 @@ export default function ProfilePage() {
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                                 required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de téléphone</label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                placeholder="+226 XX XX XX XX"
+                                pattern="[+][0-9]{1,4}[0-9]{6,14}"
+                                title="Format: +226 XX XX XX XX (indicatif pays + numéro)"
                             />
                         </div>
                         <div className="flex justify-end">

@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         const { rows } = await db.query(
             `SELECT id, email, name, role, is_active, created_at, updated_at, phone
        FROM users
+       WHERE is_active = true
        ORDER BY created_at DESC`
         );
 
