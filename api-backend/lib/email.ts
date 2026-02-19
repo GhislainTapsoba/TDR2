@@ -88,50 +88,20 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 }
 
 export async function sendSMS(options: SMSOptions): Promise<void> {
-  try {
-    if (process.env.NODE_ENV !== 'production' || TWILIO_ACCOUNT_SID === 'your_twilio_account_sid') {
-      console.log('📱 SMS SIMULÉ (Mode Test):');
-      console.log('To:', options.to);
-      console.log('Message:', options.message);
-      await db.query(
-        `INSERT INTO sms_logs (recipient, message, sent_at, status) VALUES ($1, $2, NOW(), 'sent')`,
-        [options.to, options.message]
-      );
-      return;
-    }
-
-    const client = getTwilioClient();
-    if (!client) {
-      throw new Error('Failed to initialize Twilio client');
-    }
-
-    const message = await client.messages.create({
-      from: TWILIO_PHONE_NUMBER,
-      to: options.to,
-      body: options.message,
-    });
-
-    console.log('SMS sent successfully to:', options.to);
-    console.log('SMS SID:', message.sid);
-
-    await db.query(
-      `INSERT INTO sms_logs (recipient, message, sent_at, status) VALUES ($1, $2, NOW(), 'sent')`,
-      [options.to, options.message]
-    );
-    console.log('SMS sent successfully to:', options.to);
-  } catch (error) {
-    console.error('Error sending SMS:', error);
-    await db.query(
-      `INSERT INTO sms_logs (recipient, message, sent_at, status, error_message) VALUES ($1, $2, NOW(), 'failed', $3)`,
-      [options.to, options.message, (error as Error).message]
-    );
-    throw error;
-  }
+  // Rediriger les SMS vers WhatsApp pour maintenir la cohérence
+  console.log('📱 Redirection SMS vers WhatsApp:', options.to);
+  await sendWhatsApp({
+    to: options.to,
+    message: options.message
+  });
 }
 
 export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
   try {
-    if (process.env.NODE_ENV !== 'production' || TWILIO_ACCOUNT_SID === 'your_twilio_account_sid') {
+    const whatsappApiUrl = process.env.WHATSAPP_API_URL || 'http://127.0.0.1:3002';
+
+    // En mode test ou si l'API n'est pas disponible, simuler l'envoi
+    if (process.env.NODE_ENV !== 'production' || whatsappApiUrl.includes('localhost')) {
       console.log('💬 WHATSAPP SIMULÉ (Mode Test):');
       console.log('To:', options.to);
       console.log('Message:', options.message);
@@ -142,23 +112,38 @@ export async function sendWhatsApp(options: WhatsAppOptions): Promise<void> {
       return;
     }
 
-    const client = getTwilioClient();
-    if (!client) {
-      throw new Error('Failed to initialize Twilio client');
+    // Vérifier si le service WhatsApp est connecté
+    const statusResponse = await fetch(`${whatsappApiUrl}/status`);
+    const statusData = await statusResponse.json();
+
+    if (!statusData.connected) {
+      throw new Error('WhatsApp service is not connected');
     }
 
-    const message = await client.messages.create({
-      from: TWILIO_WHATSAPP_NUMBER,
-      to: `whatsapp:+${options.to.replace(/^\+/, '')}`,
-      body: options.message,
+    // Envoyer le message via l'API WhatsApp bot
+    const response = await fetch(`${whatsappApiUrl}/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: options.to,
+        message: options.message
+      })
     });
 
-    console.log('WhatsApp message SID:', message.sid);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send WhatsApp message');
+    }
+
+    const result = await response.json();
+    console.log('WhatsApp message sent successfully to:', options.to);
+
     await db.query(
       `INSERT INTO whatsapp_logs (recipient, message, sent_at, status, message_sid) VALUES ($1, $2, NOW(), 'sent', $3)`,
-      [options.to, options.message, message.sid]
+      [options.to, options.message, result.messageId || 'sent']
     );
-    console.log('WhatsApp sent successfully to:', options.to);
   } catch (error) {
     console.error('Error sending WhatsApp:', error);
     await db.query(
