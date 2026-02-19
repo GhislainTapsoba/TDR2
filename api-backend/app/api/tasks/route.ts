@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { handleCorsOptions, corsResponse } from '@/lib/cors';
 import { mapDbRoleToUserRole, requirePermission, canManageProject, canWorkOnProject } from '@/lib/permissions';
-import { sendTaskAssignmentEmail, sendTaskUpdateEmail, createConfirmationToken, getManagersAndAdmins } from '@/lib/email';
+import { sendTaskAssignmentEmail, sendTaskAssignmentWhatsApp, sendTaskUpdateEmail, createConfirmationToken, getManagersAndAdmins } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
     return handleCorsOptions(request);
@@ -198,16 +198,17 @@ export async function POST(request: NextRequest) {
 
             // Get assignee details with their tokens
             const { rows: assignees } = await db.query(
-                `SELECT u.id, u.name, u.email, ta.confirmation_token 
+                `SELECT u.id, u.name, u.email, u.phone, ta.confirmation_token 
                  FROM users u 
                  JOIN task_assignees ta ON u.id = ta.user_id 
                  WHERE ta.task_id = $1 AND u.id = ANY($2::uuid[])`,
                 [task.id, parsedAssigneeIds]
             );
 
-            // Send email to each assignee
+            // Send email and WhatsApp to each assignee
             for (const assignee of assignees) {
                 try {
+                    // Send email
                     await sendTaskAssignmentEmail({
                         to: assignee.email,
                         recipientId: assignee.id,
@@ -219,6 +220,26 @@ export async function POST(request: NextRequest) {
                         assignedById: user.id,
                         confirmationToken: assignee.confirmation_token,
                     });
+
+                    // Send WhatsApp if user has phone number
+                    if (assignee.phone) {
+                        try {
+                            await sendTaskAssignmentWhatsApp({
+                                to: assignee.phone,
+                                recipientId: assignee.id,
+                                recipientName: assignee.name || 'Utilisateur',
+                                taskTitle: task.title,
+                                taskId: task.id,
+                                projectName: project.title,
+                                assignedBy: user.name || user.email,
+                                assignedById: user.id,
+                                confirmationToken: assignee.confirmation_token,
+                            });
+                        } catch (whatsappError) {
+                            console.error('Error sending WhatsApp to assignee:', whatsappError);
+                            // Continue with email only
+                        }
+                    }
 
                     // Create notification
                     await db.query(

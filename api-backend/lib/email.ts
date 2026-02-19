@@ -385,6 +385,68 @@ export async function sendTaskReminderEmail(data: {
   }
 }
 
+export async function sendTaskAssignmentWhatsApp(data: {
+  to: string;
+  recipientId: string;
+  recipientName: string;
+  taskTitle: string;
+  taskId: string;
+  projectName?: string;
+  assignedBy?: string;
+  assignedById?: string;
+  confirmationToken?: string;
+}): Promise<void> {
+  try {
+    let assignedByName = data.assignedBy;
+    if (!assignedByName && data.assignedById) {
+      try {
+        const { rows } = await db.query('SELECT name, email FROM users WHERE id = $1', [data.assignedById]);
+        if (rows.length > 0) {
+          const user = rows[0];
+          assignedByName = user.name || user.email || 'Un utilisateur';
+        }
+      } catch (error) {
+        console.error('Error fetching assigner name:', error);
+        assignedByName = 'Un utilisateur';
+      }
+    }
+
+    const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001';
+    const acceptUrl = `${frontendUrl}/tasks/${data.taskId}/accept?token=${data.confirmationToken}`;
+    const rejectUrl = `${frontendUrl}/tasks/${data.taskId}/reject?token=${data.confirmationToken}`;
+    const taskUrl = `${frontendUrl}/tasks/${data.taskId}`;
+    const todayFormatted = new Date().toLocaleDateString('fr-FR');
+
+    const whatsappMessage = `🎯 *Nouvelle Tâche Assignée*
+
+Bonjour *${data.recipientName}*,
+
+Vous avez été assigné(e) à la tâche "*${data.taskTitle}*" par ${assignedByName}.
+
+📋 *Détails de la tâche:*
+📂 Projet: ${data.projectName || 'Non spécifié'}
+📝 Tâche: ${data.taskTitle}
+🆔 ID: ${data.taskId}
+👤 Assignée par: ${assignedByName}
+📅 Date d'assignation: ${todayFormatted}
+
+⚠️ *Action requise:*
+Veuillez consulter votre email ou l'application Team Project pour accepter ou refuser cette tâche.
+
+_Cette notification a été envoyée automatiquement par Team Project_`;
+
+    await sendWhatsApp({
+      to: data.to,
+      message: whatsappMessage
+    });
+
+    console.log(`💬 WhatsApp d'assignation envoyé à ${data.to} pour la tâche ${data.taskTitle}`);
+  } catch (error) {
+    console.error('Error sending task assignment WhatsApp:', error);
+    throw error;
+  }
+}
+
 export async function sendTaskAssignmentEmail(data: {
   to: string;
   recipientId: string;
