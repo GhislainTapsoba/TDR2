@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
             conditions.push(`p.id IN (SELECT project_id FROM project_members WHERE user_id = $${params.length + 1})`);
             params.push(user.id);
         }
+        // Managers and admins can see all stages - no additional filtering needed
 
         if (conditions.length > 0) {
             query += ' AND ' + conditions.join(' AND ');
@@ -109,13 +110,16 @@ export async function POST(request: NextRequest) {
             return corsResponse({ error: 'Projet introuvable' }, request, { status: 404 });
         }
 
-        // Check if user can manage project or work on it (for employees)
+        // Check if user can manage project or work on it
         const canManage = canManageProject(userRole, user.id, projectRows[0].manager_id);
         const canWork = await canWorkOnProject(user.id, project_id);
 
-        if (!canManage && !canWork) {
+        // Managers and admins can create stages in any project
+        // Employees can only create stages in projects they work on
+        if (userRole === 'employee' && !canWork) {
             return corsResponse({ error: 'Permission refusée pour ce projet' }, request, { status: 403 });
         }
+        // For managers and admins, no additional project-level restrictions needed
 
         // Insert stage
         const { rows } = await db.query(
@@ -186,9 +190,12 @@ export async function DELETE(request: NextRequest) {
         const canManage = canManageProject(userRole, user.id, stageRows[0].manager_id);
         const canWork = await canWorkOnProject(user.id, stageRows[0].project_id);
 
-        if (!canManage && !canWork) {
+        // Managers and admins can delete stages in any project
+        // Employees can only delete stages in projects they work on
+        if (userRole === 'employee' && !canWork) {
             return corsResponse({ error: 'Permission refusée pour cette étape' }, request, { status: 403 });
         }
+        // For managers and admins, no additional project-level restrictions needed
 
         // Delete stage
         await db.query('DELETE FROM stages WHERE id = $1', [stageId]);
