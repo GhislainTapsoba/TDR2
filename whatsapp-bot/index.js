@@ -1,4 +1,4 @@
-const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const express = require('express');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
@@ -13,62 +13,109 @@ let isConnected = false;
 const logger = pino({ level: 'silent' });
 
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
+        const { version } = await fetchLatestBaileysVersion();
 
-    sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: false,
-        logger
-    });
+        sock = makeWASocket({
+            auth: state,
+            printQRInTerminal: true,
+            logger,
+            version,
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 0,
+            keepAliveIntervalMs: 10000,
+            emitOwnEvents: true,
+            markOnlineOnConnect: true
+        });
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
-            qrCode = qr;
-            console.log('QR Code generated. Access /qr to view it');
-            qrcode.generate(qr, { small: true });
-        }
-
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed. Reconnecting:', shouldReconnect);
-            isConnected = false;
-            if (shouldReconnect) {
-                connectToWhatsApp();
+            if (qr) {
+                qrCode = qr;
+                console.log('\n=================================');
+                console.log('QR CODE GENERATED!');
+                console.log('Scan this with WhatsApp:');
+                console.log('=================================\n');
+                qrcode.generate(qr, { small: true });
+                console.log('\n=================================');
+                console.log('Or get QR via: GET /qr');
+                console.log('=================================\n');
             }
-        } else if (connection === 'open') {
-            console.log('WhatsApp connected successfully!');
-            isConnected = true;
-            qrCode = null;
-        }
-    });
 
-    sock.ev.on('creds.update', saveCreds);
+            if (connection === 'close') {
+                isConnected = false;
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-    sock.ev.on('messages.upsert', async (m) => {
-        const message = m.messages[0];
-        if (!message.key.fromMe && m.type === 'notify') {
-            console.log('Received message:', message.message?.conversation || message.message?.extendedTextMessage?.text);
-        }
-    });
+                console.log('Connection closed:', lastDisconnect?.error?.message);
+                console.log('Status code:', statusCode);
+                console.log('Should reconnect:', shouldReconnect);
+
+                if (shouldReconnect) {
+                    console.log('Reconnecting in 5 seconds...');
+                    setTimeout(() => connectToWhatsApp(), 5000);
+                } else {
+                    console.log('Logged out. Please restart and scan QR code again.');
+                }
+            } else if (connection === 'open') {
+                console.log('\n✅ WhatsApp connected successfully!');
+                console.log('Phone number:', sock.user?.id);
+                isConnected = true;
+                qrCode = null;
+            } else if (connection === 'connecting') {
+                console.log('Connecting to WhatsApp...');
+            }
+        });
+
+        sock.ev.on('creds.update', saveCreds);
+
+        sock.ev.on('messages.upsert', async (m) => {
+            try {
+                const message = m.messages[0];
+                if (!message.key.fromMe && m.type === 'notify') {
+                    const text = message.message?.conversation ||
+                        message.message?.extendedTextMessage?.text ||
+                        'Non-text message';
+                    console.log('📨 Received:', text, 'from', message.key.remoteJid);
+                }
+            } catch (err) {
+                console.error('Error handling message:', err.message);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in connectToWhatsApp:', error.message);
+        console.log('Retrying in 10 seconds...');
+        setTimeout(() => connectToWhatsApp(), 10000);
+    }
 }
 
 // REST API endpoints
 app.get('/status', (req, res) => {
     res.json({
         connected: isConnected,
-        hasQR: qrCode !== null
+        hasQR: qrCode !== null,
+        user: sock?.user || null
     });
 });
 
 app.get('/qr', (req, res) => {
     if (qrCode) {
-        res.json({ qr: qrCode });
+        res.json({
+            qr: qrCode,
+            message: 'Scan this QR code with WhatsApp'
+        });
     } else if (isConnected) {
-        res.json({ message: 'Already connected' });
+        res.json({
+            message: 'Already connected',
+            user: sock?.user
+        });
     } else {
-        res.json({ message: 'No QR code available yet' });
+        res.json({
+            message: 'No QR code available yet. Connection in progress...'
+        });
     }
 });
 
@@ -76,22 +123,36 @@ app.post('/send', async (req, res) => {
     const { to, message } = req.body;
 
     if (!isConnected) {
-        return res.status(503).json({ error: 'WhatsApp not connected' });
+        return res.status(503).json({
+            error: 'WhatsApp not connected',
+            hint: 'Check /status or /qr endpoint'
+        });
     }
 
     if (!to || !message) {
-        return res.status(400).json({ error: 'Missing "to" or "message" field' });
+        return res.status(400).json({
+            error: 'Missing required fields',
+            required: { to: 'phone number', message: 'text' }
+        });
     }
 
     try {
-        // Format number: remove + and add @s.whatsapp.net
+        // Format: remove all non-digits, add @s.whatsapp.net
         const jid = to.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-        
+
         await sock.sendMessage(jid, { text: message });
-        res.json({ success: true, message: 'Message sent' });
+
+        res.json({
+            success: true,
+            message: 'Message sent',
+            to: jid
+        });
     } catch (error) {
         console.error('Error sending message:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message,
+            hint: 'Make sure the number is valid and registered on WhatsApp'
+        });
     }
 });
 
@@ -99,16 +160,22 @@ app.get('/', (req, res) => {
     res.json({
         name: 'TeamProject WhatsApp Bot',
         status: isConnected ? 'connected' : 'disconnected',
+        user: sock?.user || null,
         endpoints: {
-            status: 'GET /status',
-            qr: 'GET /qr',
-            send: 'POST /send (body: {to, message})'
+            status: 'GET /status - Check connection status',
+            qr: 'GET /qr - Get QR code for pairing',
+            send: 'POST /send - Send message (body: {to, message})'
         }
     });
 });
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`WhatsApp API running on port ${PORT}`);
+    console.log(`\n🚀 WhatsApp API Server started on port ${PORT}`);
+    console.log(`📡 Endpoints:`);
+    console.log(`   - GET  http://localhost:${PORT}/status`);
+    console.log(`   - GET  http://localhost:${PORT}/qr`);
+    console.log(`   - POST http://localhost:${PORT}/send\n`);
+
     connectToWhatsApp();
 });
