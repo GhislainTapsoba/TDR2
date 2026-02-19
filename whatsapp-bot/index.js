@@ -9,17 +9,26 @@ app.use(express.json());
 let sock;
 let qrCode = null;
 let isConnected = false;
+let isConnecting = false;
 
-const logger = pino({ level: 'silent' });
+const logger = pino({ level: 'info' });
 
 async function connectToWhatsApp() {
+    if (isConnecting) {
+        console.log('⏳ Connection already in progress...');
+        return;
+    }
+
+    isConnecting = true;
+
     try {
+        console.log('🔄 Starting WhatsApp connection...');
         const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
         const { version } = await fetchLatestBaileysVersion();
 
         sock = makeWASocket({
             auth: state,
-            printQRInTerminal: true,
+            printQRInTerminal: false,
             logger,
             version,
             connectTimeoutMs: 60000,
@@ -54,16 +63,19 @@ async function connectToWhatsApp() {
                 console.log('Should reconnect:', shouldReconnect);
 
                 if (shouldReconnect) {
-                    console.log('Reconnecting in 5 seconds...');
+                    console.log('🔄 Reconnecting in 5 seconds...');
+                    isConnecting = false;
                     setTimeout(() => connectToWhatsApp(), 5000);
                 } else {
-                    console.log('Logged out. Please restart and scan QR code again.');
+                    console.log('❌ Logged out. Please restart and scan QR code again.');
+                    isConnecting = false;
                 }
             } else if (connection === 'open') {
                 console.log('\n✅ WhatsApp connected successfully!');
                 console.log('Phone number:', sock.user?.id);
                 isConnected = true;
                 qrCode = null;
+                isConnecting = false;
             } else if (connection === 'connecting') {
                 console.log('Connecting to WhatsApp...');
             }
@@ -86,8 +98,10 @@ async function connectToWhatsApp() {
         });
 
     } catch (error) {
-        console.error('Error in connectToWhatsApp:', error.message);
-        console.log('Retrying in 10 seconds...');
+        console.error('❌ Error in connectToWhatsApp:', error.message);
+        console.error('Full error:', error);
+        isConnecting = false;
+        console.log('🔄 Retrying in 10 seconds...');
         setTimeout(() => connectToWhatsApp(), 10000);
     }
 }
