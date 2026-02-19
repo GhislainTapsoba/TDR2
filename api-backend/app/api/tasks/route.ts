@@ -194,13 +194,33 @@ export async function POST(request: NextRequest) {
                      VALUES ($1, $2, $3, 'pending')`,
                     [task.id, assigneeId, confirmationToken]
                 );
+
+                // Generate rejection token for this assignee
+                const rejectionToken = await createConfirmationToken({
+                    type: 'TASK_REJECTION',
+                    userId: assigneeId,
+                    entityType: 'task',
+                    entityId: task.id,
+                    metadata: {
+                        task_title: task.title,
+                        project_name: project.title,
+                    },
+                });
+
+                // Insert rejection token
+                await db.query(
+                    `INSERT INTO task_rejections (task_id, user_id, token, expires_at, used) 
+                     VALUES ($1, $2, $3, NOW() + INTERVAL '7 days', FALSE)`,
+                    [task.id, assigneeId, rejectionToken]
+                );
             }
 
             // Get assignee details with their tokens
             const { rows: assignees } = await db.query(
-                `SELECT u.id, u.name, u.email, u.phone, ta.confirmation_token 
+                `SELECT u.id, u.name, u.email, u.phone, ta.confirmation_token, tr.token as rejection_token
                  FROM users u 
                  JOIN task_assignees ta ON u.id = ta.user_id 
+                 LEFT JOIN task_rejections tr ON u.id = tr.user_id AND tr.task_id = ta.task_id AND tr.used = FALSE
                  WHERE ta.task_id = $1 AND u.id = ANY($2::uuid[])`,
                 [task.id, parsedAssigneeIds]
             );
@@ -219,6 +239,7 @@ export async function POST(request: NextRequest) {
                         assignedBy: user.name || user.email,
                         assignedById: user.id,
                         confirmationToken: assignee.confirmation_token,
+                        rejectionToken: assignee.rejection_token,
                     });
 
                     // Send WhatsApp if user has phone number
