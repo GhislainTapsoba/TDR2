@@ -178,11 +178,18 @@ export async function POST(
 
         return corsResponse({
             success: true,
-            message: 'Tâche acceptée avec succès',
+            message: 'Tâche acceptée avec succès. Le statut de la tâche a été mis à jour à "EN COURS" et le manager a été notifié.',
             task: {
                 id: taskId,
                 status: 'IN_PROGRESS',
                 title: task.title
+            },
+            updates: {
+                task_status: 'IN_PROGRESS',
+                assignee_status: 'accepted',
+                manager_notified: true,
+                activity_logged: true,
+                notifications_sent: ['email', 'sms', 'whatsapp']
             }
         }, request);
 

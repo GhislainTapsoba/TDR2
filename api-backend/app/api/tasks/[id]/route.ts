@@ -275,7 +275,46 @@ export async function PUT(
             [id]
         );
 
-        return corsResponse(finalRows[0], request);
+        // Prepare detailed update information
+        const taskData = finalRows[0];
+        const changes = [];
+
+        if (status && status !== currentTask.status) {
+            changes.push(`Statut: "${currentTask.status}" → "${status}"`);
+        }
+        if (title && title !== currentTask.title) {
+            changes.push(`Titre: "${currentTask.title}" → "${title}"`);
+        }
+        if (description && description !== currentTask.description) {
+            changes.push(`Description modifiée`);
+        }
+        if (priority && priority !== currentTask.priority) {
+            changes.push(`Priorité: "${currentTask.priority}" → "${priority}"`);
+        }
+        if (due_date && due_date !== currentTask.due_date) {
+            changes.push(`Échéance: ${currentTask.due_date} → ${due_date}`);
+        }
+        if (assignee_ids && assignee_ids.length > 0) {
+            changes.push(`${assignee_ids.length} assigné(s) ajouté(s)`);
+        }
+        if (removedAssigneeIds.length > 0) {
+            changes.push(`${removedAssigneeIds.length} assigné(s) retiré(s)`);
+        }
+
+        return corsResponse({
+            ...taskData,
+            update_summary: {
+                message: changes.length > 0 ? `Tâche mise à jour avec succès. ${changes.join(', ')}.` : 'Tâche mise à jour avec succès.',
+                changes: changes,
+                updated_by: user.name || user.email,
+                updated_at: new Date().toISOString(),
+                notifications_sent: {
+                    assignees: assignee_ids && assignee_ids.length > 0,
+                    managers: true,
+                    admins: true
+                }
+            }
+        }, request);
     } catch (error) {
         console.error('PUT /api/tasks/[id] error:', error);
         return corsResponse({ error: 'Erreur serveur' }, request, { status: 500 });

@@ -195,12 +195,19 @@ export async function POST(
 
         return corsResponse({
             success: true,
-            message: 'Tâche refusée avec succès',
+            message: 'Tâche refusée avec succès. Le statut de la tâche a été mis à jour à "REJETÉ" et le manager a été notifié.',
             task: {
                 id: taskId,
                 status: 'REJECTED',
                 title: task.title,
                 rejection_reason: reason.trim()
+            },
+            updates: {
+                task_status: 'REJECTED',
+                assignee_status: 'rejected',
+                rejection_recorded: true,
+                manager_notified: true,
+                activity_logged: true
             }
         }, request);
 
