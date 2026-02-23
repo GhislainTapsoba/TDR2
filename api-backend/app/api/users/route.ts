@@ -22,12 +22,19 @@ export async function GET(request: NextRequest) {
             return corsResponse({ error: perm.error }, request, { status: 403 });
         }
 
-        const { rows } = await db.query(
-            `SELECT id, email, name, role, is_active, created_at, updated_at, phone
-       FROM users
-       WHERE is_active = true
-       ORDER BY created_at DESC`
-        );
+        const { searchParams } = new URL(request.url);
+        const includeInactive = searchParams.get('include_inactive') === 'true';
+
+        const query = includeInactive
+            ? `SELECT id, email, name, role, is_active, created_at, updated_at, phone
+               FROM users
+               ORDER BY created_at DESC`
+            : `SELECT id, email, name, role, is_active, created_at, updated_at, phone
+               FROM users
+               WHERE is_active = true
+               ORDER BY created_at DESC`;
+
+        const { rows } = await db.query(query);
 
         return corsResponse(rows, request);
     } catch (error) {

@@ -60,8 +60,14 @@ export default function UsersPage() {
                 phone: '',
             });
             loadUsers();
-        } catch (error) {
+            alert('Utilisateur créé avec succès');
+        } catch (error: any) {
             console.error('Error creating user:', error);
+            if (error.response?.status === 409) {
+                alert('Un utilisateur avec cet email existe déjà');
+            } else {
+                alert('Erreur lors de la création de l\'utilisateur');
+            }
         }
     };
 
