@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         }
 
         const { rows } = await db.query(
-            'INSERT INTO reports (title, content, type, created_by_id, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+            'INSERT INTO reports (title, description, type, created_by_id, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
             [title, content, type, user.id]
         );
 

@@ -91,6 +91,26 @@ export default function ReportsPage() {
     }
   };
 
+  const generateWeeklyReports = async () => {
+    try {
+      const response = await fetch('/api/reports/weekly', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération des rapports hebdomadaires');
+      }
+
+      const result = await response.json();
+      alert('📊 Rapports hebdomadaires générés et envoyés avec succès!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+    }
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
@@ -209,6 +229,26 @@ export default function ReportsPage() {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mt-2"></div>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Bouton pour les rapports hebdomadaires */}
+      <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Rapports Hebdomadaires</h2>
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={generateWeeklyReports}
+            className="flex items-center p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+          >
+            <svg className="w-6 h-6 text-green-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a12 12 0 01.67 6.93L12 17.8l-2.22 2.22a12 12 0 01.67-6.93L3 8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01" />
+            </svg>
+            <span className="text-sm font-medium">📊 Générer les rapports de la semaine</span>
+          </button>
+          <p className="text-xs text-gray-500 mt-2">
+            Les rapports seront générés en format Excel et envoyés par email à tous les managers et admins
+          </p>
         </div>
       </div>
 
