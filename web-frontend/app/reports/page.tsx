@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { is } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Report {
   id: string;
@@ -91,7 +91,7 @@ export default function ReportsPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     try {
