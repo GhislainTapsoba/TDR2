@@ -37,31 +37,19 @@ export async function sendTaskReminders(): Promise<void> {
             AND t.due_date IS NOT NULL
             AND (
                 -- Due tomorrow (send evening before)
-                (DATE(t.due_date) = DATE(NOW() + INTERVAL '1 day') 
-                 AND EXTRACT(HOUR FROM NOW()) >= 18)
+                (DATE(t.due_date) = DATE(NOW() + INTERVAL '1 day'))
                 OR
                 -- Due today (send morning of)
-                (DATE(t.due_date) = DATE(NOW()) 
-                 AND EXTRACT(HOUR FROM NOW()) >= 8 
-                 AND EXTRACT(HOUR FROM NOW()) < 12)
+                (DATE(t.due_date) = DATE(NOW()))
                 OR
-                -- Overdue (send morning of)
-                (t.due_date < NOW() 
-                 AND EXTRACT(HOUR FROM NOW()) >= 8 
-                 AND EXTRACT(HOUR FROM NOW()) < 12)
+                -- Overdue (send anytime for testing)
+                (t.due_date < NOW())
             )
-            AND (
-                -- Only send once per day per task
-                t.id NOT IN (
-                    SELECT task_id FROM task_reminders 
-                    WHERE DATE(created_at) = DATE(NOW())
-                )
-            )
-        `;
+            ORDER BY t.due_date ASC
 
         const { rows } = await db.query(query);
 
-        console.log(`Found ${rows.length} tasks needing reminders`);
+        console.log(`Found ${ rows.length } tasks needing reminders`);
 
         if (rows.length === 0) {
             console.log('No tasks need reminders at this time');
@@ -70,7 +58,7 @@ export async function sendTaskReminders(): Promise<void> {
 
         console.log('Tasks needing reminders:');
         for (const task of rows) {
-            console.log(`  - ${task.task_title} (ID: ${task.task_id})`);
+            console.log(`  - ${ task.task_title } (ID: ${ task.task_id })`);
             await sendReminderForTask({
                 taskId: task.task_id,
                 taskTitle: task.task_title,
@@ -112,7 +100,7 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
         return; // Don't send reminder if more than 1 day away
     }
 
-    console.log(`Sending ${reminderType} reminder for task: ${task.taskTitle}`);
+    console.log(`Sending ${ reminderType } reminder for task: ${ task.taskTitle } `);
 
     try {
         // Send email reminder
@@ -126,15 +114,15 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
 
         // Log the reminder
         await db.query(
-            `INSERT INTO task_reminders (task_id, created_at, reminder_type, urgency)
-             VALUES ($1, NOW(), $2, $3)`,
+            `INSERT INTO task_reminders(task_id, created_at, reminder_type, urgency)
+        VALUES($1, NOW(), $2, $3)`,
             [task.taskId, reminderType, urgency]
         );
 
-        console.log(`✅ Reminder sent for task: ${task.taskTitle}`);
+        console.log(`✅ Reminder sent for task: ${ task.taskTitle } `);
 
     } catch (error) {
-        console.error(`❌ Failed to send reminder for task ${task.taskTitle}:`, error);
+        console.error(`❌ Failed to send reminder for task ${ task.taskTitle }: `, error);
     }
 }
 
@@ -168,7 +156,7 @@ async function sendTaskReminderWhatsApp(task: TaskReminder, reminderType: string
         );
 
         if (userResult.length === 0) {
-            console.log(`❌ User not found for email: ${task.assigneeEmail}`);
+            console.log(`❌ User not found for email: ${ task.assigneeEmail } `);
             return;
         }
 
@@ -181,7 +169,7 @@ async function sendTaskReminderWhatsApp(task: TaskReminder, reminderType: string
 
         // Si les préférences n'existent pas ou que WhatsApp est désactivé, ne pas envoyer
         if (preferences.length === 0 || !preferences[0].whatsapp_task_due) {
-            console.log(`📫 WhatsApp reminders disabled for user ${userId}`);
+            console.log(`📫 WhatsApp reminders disabled for user ${ userId }`);
             return;
         }
 
@@ -192,22 +180,22 @@ async function sendTaskReminderWhatsApp(task: TaskReminder, reminderType: string
             message
         });
 
-        console.log(`✅ WhatsApp reminder sent for task: ${task.taskTitle}`);
+        console.log(`✅ WhatsApp reminder sent for task: ${ task.taskTitle } `);
     } catch (error) {
-        console.error(`❌ Failed to send WhatsApp reminder for task ${task.taskTitle}:`, error);
+        console.error(`❌ Failed to send WhatsApp reminder for task ${ task.taskTitle }: `, error);
     }
 }
 
 function getReminderSubject(taskTitle: string, reminderType: string): string {
     switch (reminderType) {
         case 'overdue':
-            return `⚠️ TÂCHE EN RETARD: ${taskTitle}`;
+            return `⚠️ TÂCHE EN RETARD: ${ taskTitle } `;
         case 'due_today':
             return `🔴 TÂCHE AUJOURD'HUI: ${taskTitle}`;
         case 'due_tomorrow':
-            return `🟡 TÂCHE DEMAIN: ${taskTitle}`;
+        return `🟡 TÂCHE DEMAIN: ${taskTitle}`;
         default:
-            return `Rappel: ${taskTitle}`;
+        return `Rappel: ${taskTitle}`;
     }
 }
 
