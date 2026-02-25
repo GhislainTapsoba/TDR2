@@ -29,8 +29,9 @@ export default function InactiveUsersPage() {
 
     const loadInactiveUsers = async () => {
         try {
-            const response = await usersAPI.getAll();
-            setUsers(response.data.filter((u: User) => !u.is_active));
+            const response = await fetch('/api/users?include_inactive=true');
+            const data = await response.json();
+            setUsers(data.filter((u: User) => !u.is_active));
         } catch (error) {
             console.error('Error loading inactive users:', error);
         } finally {

@@ -12,6 +12,8 @@ let sock;
 let qrCode = null;
 let isConnected = false;
 let isConnecting = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 // Configuration du logger avec rotation
 const logger = pino({
@@ -50,6 +52,23 @@ async function connectToWhatsApp() {
 
     try {
         console.log('🔄 Starting WhatsApp connection...');
+
+        // Vérifier si la session existe et est potentiellement corrompue
+        const authPath = './auth_info';
+        if (fs.existsSync(authPath)) {
+            try {
+                // Tenter de lire les crédits pour vérifier s'ils sont valides
+                const { state } = await useMultiFileAuthState(authPath);
+                if (!state || !state.creds) {
+                    console.log('🧹 Session corrupted, cleaning up...');
+                    fs.rmSync(authPath, { recursive: true, force: true });
+                }
+            } catch (error) {
+                console.log('🧹 Invalid session detected, cleaning up...');
+                fs.rmSync(authPath, { recursive: true, force: true });
+            }
+        }
+
         const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
         const { version } = await fetchLatestBaileysVersion();
 
@@ -87,12 +106,19 @@ async function connectToWhatsApp() {
 
                 console.log('Connection closed:', lastDisconnect?.error?.message);
                 console.log('Status code:', statusCode);
+                console.log('Reconnect attempts:', reconnectAttempts);
                 console.log('Should reconnect:', shouldReconnect);
 
-                if (shouldReconnect) {
-                    console.log('🔄 Reconnecting in 5 seconds...');
+                if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    // Backoff exponentiel : 5s, 10s, 20s, 40s, 80s...
+                    const backoffDelay = Math.min(5000 * Math.pow(2, reconnectAttempts - 1), 60000);
+                    console.log(`🔄 Reconnecting in ${backoffDelay / 1000} seconds... (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
                     isConnecting = false;
-                    setTimeout(() => connectToWhatsApp(), 5000);
+                    setTimeout(() => connectToWhatsApp(), backoffDelay);
+                } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                    console.log('❌ Max reconnection attempts reached. Please check the connection and restart manually.');
+                    isConnecting = false;
                 } else {
                     console.log('❌ Logged out. Please restart and scan QR code again.');
                     isConnecting = false;
@@ -105,6 +131,7 @@ async function connectToWhatsApp() {
                 isConnected = true;
                 qrCode = null;
                 isConnecting = false;
+                reconnectAttempts = 0; // Réinitialiser les tentatives
 
                 // Sauvegarder les crédits après connexion réussie
                 backupCredentials();

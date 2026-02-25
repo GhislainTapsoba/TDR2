@@ -145,14 +145,28 @@ export async function DELETE(
             return corsResponse({ error: 'Vous ne pouvez pas supprimer votre propre compte' }, request, { status: 400 });
         }
 
-        // Soft delete: deactivate user
-        await db.query(
-            'UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1',
-            [id]
-        );
+        // Hard delete: remove user and related data
+        await db.query('BEGIN');
+
+        try {
+            // Delete related data first (foreign key constraints)
+            await db.query('DELETE FROM notification_preferences WHERE user_id = $1', [id]);
+            await db.query('DELETE FROM user_settings WHERE user_id = $1', [id]);
+            await db.query('DELETE FROM task_assignees WHERE user_id = $1', [id]);
+            await db.query('DELETE FROM task_rejections WHERE user_id = $1', [id]);
+            await db.query('DELETE FROM activities WHERE user_id = $1', [id]);
+
+            // Delete the user
+            await db.query('DELETE FROM users WHERE id = $1', [id]);
+
+            await db.query('COMMIT');
+        } catch (error) {
+            await db.query('ROLLBACK');
+            throw error;
+        }
 
         return corsResponse({
-            message: 'Utilisateur désactivé avec succès',
+            message: 'Utilisateur supprimé avec succès',
             user: {
                 id: targetUser.id,
                 email: targetUser.email,
