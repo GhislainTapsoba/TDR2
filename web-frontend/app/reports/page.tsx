@@ -17,7 +17,7 @@ interface Report {
 }
 
 export default function ReportsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, authLoading } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
