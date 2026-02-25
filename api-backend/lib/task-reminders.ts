@@ -347,8 +347,6 @@ ${statusEmoji} *Rappel de tâche - ${statusText}*
 🎯 *Priorité:* ${task.priority}
 📊 *Statut:* ${statusText}
 
-🔗 *Lien:* ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/tasks/${task.taskId}
-
 ---
 *Ceci est un rappel automatique du système de gestion de tâches.*
     `.trim();
