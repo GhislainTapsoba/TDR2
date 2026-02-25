@@ -48,7 +48,7 @@ export default function ReportsPage() {
     try {
       const response = await fetch('/api/reports', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
       });
 
@@ -72,7 +72,7 @@ export default function ReportsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({ type, projectId, days })
       });
@@ -99,7 +99,7 @@ export default function ReportsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify(formData)
       });
