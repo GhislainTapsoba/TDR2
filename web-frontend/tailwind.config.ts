@@ -10,6 +10,18 @@ const config: Config = {
     ],
     theme: {
         extend: {
+            fontSize: {
+                'xs': ['0.75rem', { lineHeight: '1rem' }],
+                'sm': ['0.875rem', { lineHeight: '1.25rem' }],
+                'base': ['1.125rem', { lineHeight: '1.75rem' }], // Augmenté de 1rem à 1.125rem
+                'lg': ['1.25rem', { lineHeight: '1.75rem' }], // Augmenté de 1.125rem à 1.25rem
+                'xl': ['1.5rem', { lineHeight: '2rem' }], // Augmenté de 1.25rem à 1.5rem
+                '2xl': ['2rem', { lineHeight: '2.5rem' }], // Augmenté de 1.5rem à 2rem
+                '3xl': ['2.5rem', { lineHeight: '3rem' }], // Augmenté de 1.875rem à 2.5rem
+                '4xl': ['3rem', { lineHeight: '3.5rem' }], // Augmenté de 2.25rem à 3rem
+                '5xl': ['3.5rem', { lineHeight: '4rem' }], // Augmenté de 3rem à 3.5rem
+                '6xl': ['4rem', { lineHeight: '4.5rem' }], // Augmenté de 3.75rem à 4rem
+            },
             colors: {
                 border: 'hsl(var(--border))',
                 input: 'hsl(var(--input))',

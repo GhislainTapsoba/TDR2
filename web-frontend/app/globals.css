@@ -54,6 +54,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-base;
+    font-size: 1.125rem; /* 18px au lieu de 16px par défaut */
+    line-height: 1.75rem;
+  }
+  html {
+    font-size: 1.125rem; /* Augmente la base pour tout le site */
   }
 }
