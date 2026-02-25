@@ -8,6 +8,7 @@ interface TaskReminder {
     assigneeEmail: string;
     assigneePhone: string;
     assigneeName: string;
+    assigneeId: string;
     dueDate: Date;
     priority: string;
 }
@@ -28,7 +29,8 @@ export async function sendTaskReminders(): Promise<void> {
                 p.title as project_title,
                 u.email as assignee_email,
                 u.phone as assignee_phone,
-                u.name as assignee_name
+                u.name as assignee_name,
+                u.id as assignee_id
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
             JOIN task_assignees ta ON t.id = ta.task_id
@@ -68,7 +70,8 @@ export async function sendTaskReminders(): Promise<void> {
                 priority: task.priority,
                 assigneeEmail: task.assignee_email,
                 assigneePhone: task.assignee_phone,
-                assigneeName: task.assignee_name
+                assigneeName: task.assignee_name,
+                assigneeId: task.assignee_id
             } as TaskReminder);
         }
 
@@ -115,9 +118,9 @@ async function sendReminderForTask(task: TaskReminder): Promise<void> {
 
         // Log the reminder
         await db.query(
-            `INSERT INTO task_reminders(task_id, created_at, reminder_type, urgency)
-        VALUES($1, NOW(), $2, $3)`,
-            [task.taskId, reminderType, urgency]
+            `INSERT INTO task_reminders(task_id, user_id, reminder_date, sent, created_at)
+        VALUES($1, $2, NOW(), false, NOW())`,
+            [task.taskId, task.assigneeId]
         );
 
         console.log(`✅ Reminder sent for task: ${task.taskTitle} `);
