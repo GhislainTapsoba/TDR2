@@ -67,8 +67,9 @@ export async function requirePermission(
             notifications: ['read', 'update', 'delete'],
             settings: ['read', 'update'],
             documents: ['read', 'update'],
-            permissions: [],
-            roles: [],
+            permissions: ['read'],
+            roles: ['read'],
+            reports: ['read'],
         },
     };
 
