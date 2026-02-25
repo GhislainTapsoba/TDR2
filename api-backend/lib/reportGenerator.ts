@@ -196,7 +196,7 @@ export async function generateTasksReport(): Promise<string> {
         u.email as assigned_to,
         CASE 
           WHEN t.due_date < NOW() AND t.status != 'completed' THEN 'En retard'
-          WHEN t.due_date::date = CURRENT_DATE THEN 'Aujourd\'hui'
+          WHEN t.due_date::date = CURRENT_DATE THEN 'Aujourd''hui'
           WHEN t.due_date::date = CURRENT_DATE + INTERVAL '1 day' THEN 'Demain'
           ELSE 'À venir'
         END as urgency
@@ -270,18 +270,18 @@ export async function generateActivityReport(days: number = 7): Promise<string> 
   try {
     const query = `
       SELECT 
-        a.type,
+        a.action,
         a.description,
         a.created_at,
         u.email as user_email,
         u.role as user_role,
         CASE 
-          WHEN a.type = 'task_created' THEN 'Tâche créée'
-          WHEN a.type = 'task_updated' THEN 'Tâche mise à jour'
-          WHEN a.type = 'task_completed' THEN 'Tâche terminée'
-          WHEN a.type = 'project_created' THEN 'Projet créé'
-          WHEN a.type = 'user_created' THEN 'Utilisateur créé'
-          ELSE a.type
+          WHEN a.action = 'task_created' THEN 'Tâche créée'
+          WHEN a.action = 'task_updated' THEN 'Tâche mise à jour'
+          WHEN a.action = 'task_completed' THEN 'Tâche terminée'
+          WHEN a.action = 'project_created' THEN 'Projet créé'
+          WHEN a.action = 'user_created' THEN 'Utilisateur créé'
+          ELSE a.action
         END as activity_label
       FROM activities a
       LEFT JOIN users u ON a.user_id = u.id
@@ -297,13 +297,13 @@ export async function generateActivityReport(days: number = 7): Promise<string> 
 
     // Statistiques par type
     const stats = rows.reduce((acc, activity) => {
-      acc[activity.type] = (acc[activity.type] || 0) + 1;
+      acc[activity.action] = (acc[activity.action] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     report += '📊 **Activités par type:**\n';
     for (const [type, count] of Object.entries(stats)) {
-      const label = rows.find(r => r.type === type)?.activity_label || type;
+      const label = rows.find(r => r.action === type)?.activity_label || type;
       report += `• ${label}: ${count}\n`;
     }
     report += '\n';
