@@ -33,7 +33,7 @@ export default function ReportsPage() {
   const canAccessReports = user?.role === 'admin' || user?.role === 'manager';
 
   useEffect(() => {
-    if (!authLoading && !canAccessReports) {
+    if (!isLoading && !canAccessReports) {
       setError('Accès non autorisé. Cette page est réservée aux managers et administrateurs.');
       setLoading(false);
       return;
@@ -42,7 +42,7 @@ export default function ReportsPage() {
     if (canAccessReports) {
       fetchReports();
     }
-  }, [authLoading, canAccessReports]);
+  }, [isLoading, canAccessReports]);
 
   const fetchReports = async () => {
     try {
