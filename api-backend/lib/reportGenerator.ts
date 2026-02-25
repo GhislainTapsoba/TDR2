@@ -93,10 +93,10 @@ export async function generateProjectReport(projectId?: string): Promise<string>
       report += `• Total: ${project.total_stages}\n`;
       report += `• Terminées: ${project.completed_stages}\n\n`;
 
-      const completionRate = project.total_tasks > 0 
+      const completionRate = project.total_tasks > 0
         ? Math.round((project.completed_tasks / project.total_tasks) * 100)
         : 0;
-      
+
       report += `📈 **Taux de complétion:** ${completionRate}%\n`;
       report += '---\n\n';
     }
@@ -137,11 +137,13 @@ export async function generateTeamReport(): Promise<string> {
     };
 
     for (const member of rows) {
-      const role = member.role;
-      stats[role].total++;
-      if (member.is_active) stats[role].active++;
-      stats[role].tasks += member.assigned_tasks || 0;
-      stats[role].completed += member.completed_tasks || 0;
+      const role = member.role as keyof typeof stats;
+      if (stats[role]) {
+        stats[role].total++;
+        if (member.is_active) stats[role].active++;
+        stats[role].tasks += member.assigned_tasks || 0;
+        stats[role].completed += member.completed_tasks || 0;
+      }
     }
 
     // Résumé par rôle
@@ -165,10 +167,10 @@ export async function generateTeamReport(): Promise<string> {
     report += '👤 **Membres actifs:**\n';
     for (const member of rows.filter(r => r.is_active)) {
       const roleLabel = member.role === 'admin' ? 'Admin' : member.role === 'manager' ? 'Manager' : 'Membre';
-      const completionRate = member.assigned_tasks > 0 
+      const completionRate = member.assigned_tasks > 0
         ? Math.round((member.completed_tasks / member.assigned_tasks) * 100)
         : 0;
-      
+
       report += `• ${member.email} (${roleLabel})\n`;
       report += `  - Tâches: ${member.completed_tasks}/${member.assigned_tasks} (${completionRate}%)\n`;
       report += `  - En retard: ${member.overdue_tasks || 0}\n`;
@@ -249,7 +251,7 @@ export async function generateTasksReport(): Promise<string> {
     for (const task of rows) {
       const priorityEmoji = task.priority === 'HIGH' ? '🔴' : task.priority === 'MEDIUM' ? '🟡' : '🟢';
       const urgencyEmoji = task.urgency === 'En retard' ? '⚠️' : task.urgency === 'Aujourd\'hui' ? '📅' : '⏰';
-      
+
       report += `${priorityEmoji} ${urgencyEmoji} **${task.title}**\n`;
       report += `   📂 Projet: ${task.project_title || 'Non assigné'}\n`;
       report += `   👤 Assigné à: ${task.assigned_to || 'Personne'}\n`;
