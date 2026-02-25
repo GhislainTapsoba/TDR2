@@ -1,7 +1,7 @@
 import { db } from './db';
 
 export type UserRole = 'admin' | 'manager' | 'employee';
-export type ResourceType = 'users' | 'projects' | 'stages' | 'tasks' | 'notifications' | 'settings' | 'documents' | 'permissions' | 'roles';
+export type ResourceType = 'users' | 'projects' | 'stages' | 'tasks' | 'notifications' | 'settings' | 'documents' | 'permissions' | 'roles' | 'reports';
 export type ActionType = 'create' | 'read' | 'update' | 'delete';
 
 interface PermissionCheck {
@@ -45,6 +45,7 @@ export async function requirePermission(
             documents: ['create', 'read', 'update', 'delete'],
             permissions: ['read'],
             roles: ['read'],
+            reports: ['create', 'read', 'update', 'delete'],
         },
         manager: {
             users: ['read'],
@@ -56,6 +57,7 @@ export async function requirePermission(
             documents: ['create', 'read', 'update', 'delete'],
             permissions: [],
             roles: [],
+            reports: ['create', 'read', 'update', 'delete'],
         },
         employee: {
             users: ['read'],
