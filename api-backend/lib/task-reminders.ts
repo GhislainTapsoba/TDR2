@@ -347,7 +347,6 @@ ${statusEmoji} *Rappel de tâche - ${statusText}*
 🎯 *Priorité:* ${task.priority}
 📊 *Statut:* ${statusText}
 
----
 *Ceci est un rappel automatique du système de gestion de tâches.*
     `.trim();
 }
