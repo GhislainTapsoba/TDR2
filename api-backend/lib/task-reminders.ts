@@ -159,12 +159,43 @@ async function sendTaskReminderSMS(task: TaskReminder, reminderType: string, urg
 }
 
 async function sendTaskReminderWhatsApp(task: TaskReminder, reminderType: string, urgency: string): Promise<void> {
-    const message = getReminderWhatsApp(task, reminderType, urgency);
+    try {
+        // Vérifier les préférences de notification WhatsApp de l'utilisateur
+        // D'abord, récupérer l'ID de l'utilisateur à partir de son email
+        const { rows: userResult } = await db.query(
+            'SELECT id FROM users WHERE email = $1',
+            [task.assigneeEmail]
+        );
 
-    await sendWhatsApp({
-        to: task.assigneePhone,
-        message
-    });
+        if (userResult.length === 0) {
+            console.log(`❌ User not found for email: ${task.assigneeEmail}`);
+            return;
+        }
+
+        const userId = userResult[0].id;
+
+        const { rows: preferences } = await db.query(
+            'SELECT whatsapp_task_due FROM notification_preferences WHERE user_id = $1',
+            [userId]
+        );
+
+        // Si les préférences n'existent pas ou que WhatsApp est désactivé, ne pas envoyer
+        if (preferences.length === 0 || !preferences[0].whatsapp_task_due) {
+            console.log(`📫 WhatsApp reminders disabled for user ${userId}`);
+            return;
+        }
+
+        const message = getReminderWhatsApp(task, reminderType, urgency);
+
+        await sendWhatsApp({
+            to: task.assigneePhone,
+            message
+        });
+
+        console.log(`✅ WhatsApp reminder sent for task: ${task.taskTitle}`);
+    } catch (error) {
+        console.error(`❌ Failed to send WhatsApp reminder for task ${task.taskTitle}:`, error);
+    }
 }
 
 function getReminderSubject(taskTitle: string, reminderType: string): string {
