@@ -113,45 +113,110 @@ function generateExcelContent(reportsData: any): Buffer {
     try {
         let csvContent = '';
 
-        // En-tête principal
-        csvContent += '\uFEFF'; // BOM pour UTF-8
+        // En-tête principal avec BOM UTF-8 pour Excel
+        csvContent += '\uFEFF';
         csvContent += 'Catégorie;Type;Métrique;Valeur\n';
 
         // Données Projets
         if (reportsData.projects && reportsData.projects !== 'Aucun projet trouvé pour générer un rapport.') {
-            csvContent += `Projets;Statistiques;Total;0\n`;
-            csvContent += `Projets;Statistiques;Terminés;0\n`;
-            csvContent += `Projets;Statistiques;En cours;0\n`;
-            csvContent += `Projets;Statistiques;En retard;0\n`;
+            const projectData = extractDataFromReport(reportsData.projects, 'projects');
+            projectData.forEach(item => {
+                csvContent += `Projets;${item.type};${item.metric};${item.value}\n`;
+            });
         }
 
         // Données Équipe
         if (reportsData.team && reportsData.team !== 'Aucune équipe trouvée pour générer un rapport.') {
-            csvContent += `Équipe;Membres;Total;0\n`;
-            csvContent += `Équipe;Membres;Actifs;0\n`;
-            csvContent += `Équipe;Membres;Inactifs;0\n`;
+            const teamData = extractDataFromReport(reportsData.team, 'team');
+            teamData.forEach(item => {
+                csvContent += `Équipe;${item.type};${item.metric};${item.value}\n`;
+            });
         }
 
         // Données Tâches
         if (reportsData.tasks && reportsData.tasks !== 'Aucune tâche trouvée pour générer un rapport.') {
-            csvContent += `Tâches;Statistiques;Total;0\n`;
-            csvContent += `Tâches;Statistiques;Terminées;0\n`;
-            csvContent += `Tâches;Statistiques;En cours;0\n`;
-            csvContent += `Tâches;Statistiques;En retard;0\n`;
+            const tasksData = extractDataFromReport(reportsData.tasks, 'tasks');
+            tasksData.forEach(item => {
+                csvContent += `Tâches;${item.type};${item.metric};${item.value}\n`;
+            });
         }
 
         // Données Activité
         if (reportsData.activity && reportsData.activity !== 'Aucune activité trouvée pour générer un rapport.') {
-            csvContent += `Activité;Actions;Total;0\n`;
-            csvContent += `Activité;Actions;Créations;0\n`;
-            csvContent += `Activité;Actions;Mises à jour;0\n`;
+            const activityData = extractDataFromReport(reportsData.activity, 'activity');
+            activityData.forEach(item => {
+                csvContent += `Activité;${item.type};${item.metric};${item.value}\n`;
+            });
         }
 
-        return Buffer.from(csvContent, 'utf-8');
+        // S'assurer que le contenu est bien encodé en UTF-8
+        return Buffer.from(csvContent, 'utf8');
     } catch (error) {
         console.error('❌ Erreur génération CSV:', error);
-        return Buffer.from('Catégorie;Type;Métrique;Valeur\n', 'utf-8');
+        return Buffer.from('\uFEFFCatégorie;Type;Métrique;Valeur\n', 'utf8');
     }
+}
+
+// Extraire les données réelles des rapports avec nettoyage complet
+function extractDataFromReport(reportText: string, reportType: string): Array<{ type: string, metric: string, value: string }> {
+    const data: Array<{ type: string, metric: string, value: string }> = [];
+
+    // Nettoyer complètement le texte des caractères spéciaux
+    const cleanReportText = reportText
+        .replace(/[📊📋👥📈📝🔴🟡🟢⚠️📅⏰🏗️🎯📧©®™]/g, '')
+        .replace(/[^\w\sàâäéèêëïîôöùûüÿçÀÂÄÉÈÊËÏÎÔÖÙÛÜŸÇ%;.,\-\(\)\d]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // Patterns d'extraction pour différents types de données
+    const patterns = {
+        projects: {
+            total: { pattern: /total.*?(\d+)/i, type: 'Statistiques', metric: 'Total' },
+            completed: { pattern: /termin.*?(\d+)/i, type: 'Statistiques', metric: 'Terminés' },
+            inProgress: { pattern: /en cours.*?(\d+)/i, type: 'Statistiques', metric: 'En cours' },
+            overdue: { pattern: /en retard.*?(\d+)/i, type: 'Statistiques', metric: 'En retard' },
+            completionRate: { pattern: /taux.*?(\d+)%/i, type: 'Statistiques', metric: 'Taux de complétion (%)' }
+        },
+        team: {
+            total: { pattern: /total.*?(\d+)/i, type: 'Membres', metric: 'Total' },
+            active: { pattern: /actif.*?(\d+)/i, type: 'Membres', metric: 'Actifs' },
+            inactive: { pattern: /inactif.*?(\d+)/i, type: 'Membres', metric: 'Inactifs' }
+        },
+        tasks: {
+            total: { pattern: /total.*?(\d+)/i, type: 'Statistiques', metric: 'Total' },
+            completed: { pattern: /termin.*?(\d+)/i, type: 'Statistiques', metric: 'Terminées' },
+            inProgress: { pattern: /en cours.*?(\d+)/i, type: 'Statistiques', metric: 'En cours' },
+            overdue: { pattern: /en retard.*?(\d+)/i, type: 'Statistiques', metric: 'En retard' }
+        },
+        activity: {
+            total: { pattern: /total.*?(\d+)/i, type: 'Actions', metric: 'Total' },
+            created: { pattern: /cré.*?(\d+)/i, type: 'Actions', metric: 'Créations' },
+            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Actions', metric: 'Mises à jour' }
+        }
+    };
+
+    const currentPatterns = patterns[reportType as keyof typeof patterns] || {};
+    const lines = cleanReportText.split('\n');
+
+    for (const line of lines) {
+        const cleanLine = line.trim();
+
+        if (!cleanLine) continue;
+
+        // Extraire les données avec les patterns
+        for (const [key, config] of Object.entries(currentPatterns)) {
+            const match = cleanLine.match(config.pattern);
+            if (match) {
+                data.push({
+                    type: config.type,
+                    metric: config.metric,
+                    value: match[1]
+                });
+            }
+        }
+    }
+
+    return data;
 }
 
 // Générer le contenu HTML de l'email
