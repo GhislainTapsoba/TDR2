@@ -1,6 +1,7 @@
 import { db } from './db';
 import { sendEmail } from './email';
 import { generateProjectReport, generateTeamReport, generateTasksReport, generateActivityReport } from './reportGenerator';
+import * as XLSX from 'xlsx';
 
 // Générer les rapports spécifiques pour un manager
 async function generateManagerReports(managerId: string) {
@@ -79,7 +80,7 @@ export async function generateWeeklyReports(): Promise<void> {
                     continue;
                 }
 
-                // Créer le contenu Excel en format CSV simple
+                // Créer le contenu Excel en format .xlsx
                 const excelContent = generateExcelContent(reportsData);
 
                 // Envoyer les rapports avec un email personnalisé selon le rôle
@@ -88,9 +89,9 @@ export async function generateWeeklyReports(): Promise<void> {
                     subject: `📊 Rapports Hebdomadaires - ${new Date().toLocaleDateString('fr-FR')}`,
                     html: generateWeeklyReportEmail(user.name, reportsData),
                     attachments: [{
-                        filename: `rapports-hebdomadaires-${user.role}-${new Date().toISOString().split('T')[0]}.csv`,
-                        content: excelContent,
-                        contentType: 'text/csv'
+                        filename: `rapports-hebdomadaires-${user.role}-${new Date().toISOString().split('T')[0]}.xlsx`,
+                        content: excelContent.toString('base64'),
+                        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     }]
                 });
 
@@ -107,37 +108,46 @@ export async function generateWeeklyReports(): Promise<void> {
     }
 }
 
-// Générer le contenu Excel (CSV) pour les rapports
-function generateExcelContent(reportsData: any): string {
-    let csvContent = '';
+// Générer le contenu Excel en format .xlsx
+function generateExcelContent(reportsData: any): Buffer {
+    const workbook = XLSX.utils.book_new();
 
-    // En-tête du fichier CSV
-    csvContent += 'Type de Rapport,Donnée,Valeur\n';
+    // Feuille Projets
+    if (reportsData.projects && reportsData.projects !== 'Aucun projet trouvé pour générer un rapport.') {
+        const projectsData = extractExcelData(reportsData.projects, 'Projets');
+        const projectsSheet = XLSX.utils.aoa_to_sheet(projectsData);
+        XLSX.utils.book_append_sheet(workbook, projectsSheet, 'Projets');
+    }
 
-    // Rapport Projets
-    const projectsLines = extractReportData(reportsData.projects, 'Projets');
-    csvContent += projectsLines;
+    // Feuille Équipe
+    if (reportsData.team && reportsData.team !== 'Aucune équipe trouvée pour générer un rapport.') {
+        const teamData = extractExcelData(reportsData.team, 'Équipe');
+        const teamSheet = XLSX.utils.aoa_to_sheet(teamData);
+        XLSX.utils.book_append_sheet(workbook, teamSheet, 'Équipe');
+    }
 
-    // Rapport Équipe
-    const teamLines = extractReportData(reportsData.team, 'Équipe');
-    csvContent += teamLines;
+    // Feuille Tâches
+    if (reportsData.tasks && reportsData.tasks !== 'Aucune tâche trouvée pour générer un rapport.') {
+        const tasksData = extractExcelData(reportsData.tasks, 'Tâches');
+        const tasksSheet = XLSX.utils.aoa_to_sheet(tasksData);
+        XLSX.utils.book_append_sheet(workbook, tasksSheet, 'Tâches');
+    }
 
-    // Rapport Tâches
-    const tasksLines = extractReportData(reportsData.tasks, 'Tâches');
-    csvContent += tasksLines;
+    // Feuille Activité
+    if (reportsData.activity && reportsData.activity !== 'Aucune activité trouvée pour générer un rapport.') {
+        const activityData = extractExcelData(reportsData.activity, 'Activité');
+        const activitySheet = XLSX.utils.aoa_to_sheet(activityData);
+        XLSX.utils.book_append_sheet(workbook, activitySheet, 'Activité');
+    }
 
-    // Rapport Activité
-    const activityLines = extractReportData(reportsData.activity, 'Activité');
-    csvContent += activityLines;
-
-    return csvContent;
+    // Générer le buffer Excel
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
-// Extraire les données d'un rapport pour le format CSV
-function extractReportData(reportText: string, reportType: string): string {
+// Extraire les données pour Excel
+function extractExcelData(reportText: string, reportType: string): any[][] {
     const lines = reportText.split('\n');
-    let csvLines = '';
-    let currentSection = '';
+    const data: any[][] = [];
     let dataPairs: { [key: string]: string } = {};
 
     // Patterns d'extraction pour différents types de données
@@ -175,12 +185,6 @@ function extractReportData(reportText: string, reportType: string): string {
 
         if (!cleanLine) continue;
 
-        // Détecter le type de section
-        if (cleanLine.includes('PROJETS') || cleanLine.includes('ÉQUIPE') || cleanLine.includes('TÂCHES') || cleanLine.includes('ACTIVITÉ')) {
-            currentSection = cleanLine.toLowerCase();
-            continue;
-        }
-
         // Extraire les données avec les patterns
         if (currentPatterns) {
             for (const [key, pattern] of Object.entries(currentPatterns)) {
@@ -192,18 +196,16 @@ function extractReportData(reportText: string, reportType: string): string {
         }
     }
 
-    // Générer le CSV avec les données extraites
-    csvLines += `${reportType};Clé;Valeur\n`;
+    // Créer les données pour Excel
+    data.push([reportType, 'Métrique', 'Valeur']);
 
     for (const [key, value] of Object.entries(dataPairs)) {
         if (value) {
-            // Échapper les guillemets dans la valeur
-            const escapedValue = value.replace(/"/g, '""');
-            csvLines += `${reportType};"${key}";"${escapedValue}"\n`;
+            data.push([reportType, key, value]);
         }
     }
 
-    return csvLines;
+    return data;
 }
 
 // Générer le contenu HTML de l'email

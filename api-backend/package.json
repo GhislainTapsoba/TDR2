@@ -25,6 +25,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "twilio": "^5.12.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/pg": "^8.11.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/xlsx": "^0.0.36",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "tsx": "^4.7.0",
