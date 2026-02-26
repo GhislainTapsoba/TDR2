@@ -323,12 +323,12 @@ export async function generateActivityReport(days: number = 7): Promise<string> 
       }
       acc[userKey].actions += 1;
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, { email: string; name: string | null; role: string; actions: number }>);
 
     report += '👥 **Activités par utilisateur:**\n';
     Object.values(userStats)
-      .sort((a, b) => b.actions - a.actions)
-      .forEach(user => {
+      .sort((a: any, b: any) => b.actions - a.actions)
+      .forEach((user: any) => {
         const roleLabel = user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'Membre';
         report += `• ${user.name || user.email} (${roleLabel}): ${user.actions} actions\n`;
       });
