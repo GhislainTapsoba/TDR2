@@ -40,8 +40,9 @@ export async function generateWeeklyReports(): Promise<void> {
                     html: generateWeeklyReportEmail(user.name, reportsData),
                     attachments: [{
                         filename: `rapports-hebdomadaires-${new Date().toISOString().split('T')[0]}.csv`,
-                        content: excelContent
-                    }] as any
+                        content: excelContent,
+                        contentType: 'text/csv'
+                    }]
                 });
 
                 console.log(`✅ Rapports envoyés à ${user.email} (${user.role})`);

@@ -38,6 +38,11 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+  }>;
 }
 
 interface SMSOptions {
@@ -58,17 +63,28 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     }
 
     const client = getMailjet();
+    const message: any = {
+      From: {
+        Email: process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
+        Name: process.env.MAIL_FROM_NAME || 'Team Project',
+      },
+      To: [{ Email: options.to }],
+      Subject: options.subject,
+      TextPart: options.text || '',
+      HTMLPart: options.html,
+    };
+
+    // Ajouter les pièces jointes si elles existent
+    if (options.attachments && options.attachments.length > 0) {
+      message.Attachments = options.attachments.map(attachment => ({
+        ContentType: attachment.contentType || 'text/csv',
+        Filename: attachment.filename,
+        Base64Content: Buffer.from(attachment.content).toString('base64')
+      }));
+    }
+
     const request = client.post('send', { version: 'v3.1' }).request({
-      Messages: [{
-        From: {
-          Email: process.env.MAIL_FROM_EMAIL || 'teamproject@deep-technologies.com',
-          Name: process.env.MAIL_FROM_NAME || 'Team Project',
-        },
-        To: [{ Email: options.to }],
-        Subject: options.subject,
-        TextPart: options.text || '',
-        HTMLPart: options.html,
-      }],
+      Messages: [message],
     });
 
     await request;
