@@ -90,7 +90,7 @@ export async function generateWeeklyReports(): Promise<void> {
                     html: generateWeeklyReportEmail(user.name, reportsData),
                     attachments: [{
                         filename: `rapports-hebdomadaires-${user.role}-${new Date().toISOString().split('T')[0]}.csv`,
-                        content: excelContent.toString('base64'),
+                        content: excelContent.toString('utf-8'),
                         contentType: 'text/csv'
                     }]
                 });
