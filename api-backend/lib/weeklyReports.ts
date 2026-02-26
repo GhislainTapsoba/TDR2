@@ -2,6 +2,42 @@ import { db } from './db';
 import { sendEmail } from './email';
 import { generateProjectReport, generateTeamReport, generateTasksReport, generateActivityReport } from './reportGenerator';
 
+// Générer les rapports spécifiques pour un manager
+async function generateManagerReports(managerId: string) {
+    try {
+        console.log(`📊 Génération des rapports pour le manager ${managerId}`);
+
+        // Récupérer les projets du manager
+        const { rows: projects } = await db.query(`
+            SELECT id FROM projects 
+            WHERE manager_id = $1
+        `, [managerId]);
+
+        if (projects.length === 0) {
+            console.log(`⚠️ Aucun projet trouvé pour le manager ${managerId}`);
+            return {
+                projects: "Aucun projet assigné",
+                team: "Aucune équipe disponible",
+                tasks: "Aucune tâche trouvée",
+                activity: "Aucune activité récente"
+            };
+        }
+
+        // Générer les rapports filtrés pour ce manager
+        const reportsData = {
+            projects: await generateProjectReport(), // Sera filtré dans la fonction
+            team: await generateTeamReport(), // Sera filtré dans la fonction  
+            tasks: await generateTasksReport(), // Sera filtré dans la fonction
+            activity: await generateActivityReport(7) // Sera filtré dans la fonction
+        };
+
+        return reportsData;
+    } catch (error) {
+        console.error('❌ Erreur génération rapports manager:', error);
+        throw error;
+    }
+}
+
 // Générer et envoyer les rapports hebdomadaires automatiquement
 export async function generateWeeklyReports(): Promise<void> {
     try {
@@ -20,26 +56,39 @@ export async function generateWeeklyReports(): Promise<void> {
             return;
         }
 
-        // Générer les différents rapports
-        const reportsData = {
-            projects: await generateProjectReport(),
-            team: await generateTeamReport(),
-            tasks: await generateTasksReport(),
-            activity: await generateActivityReport(7)
-        };
-
-        // Créer le contenu Excel en format CSV simple
-        const excelContent = generateExcelContent(reportsData);
-
-        // Envoyer les rapports à chaque utilisateur
+        // Envoyer les rapports à chaque utilisateur selon son rôle
         for (const user of users) {
             try {
+                let reportsData: any;
+
+                if (user.role === 'admin') {
+                    // Admin reçoit TOUS les rapports
+                    console.log(`📊 Génération des rapports complets pour l'admin ${user.email}`);
+                    reportsData = {
+                        projects: await generateProjectReport(),
+                        team: await generateTeamReport(),
+                        tasks: await generateTasksReport(),
+                        activity: await generateActivityReport(7)
+                    };
+                } else if (user.role === 'manager') {
+                    // Manager reçoit SEULEMENT les rapports de ses projets
+                    console.log(`📊 Génération des rapports personnalisés pour le manager ${user.email}`);
+                    reportsData = await generateManagerReports(user.id);
+                } else {
+                    console.log(`⚠️ Rôle non géré: ${user.role}`);
+                    continue;
+                }
+
+                // Créer le contenu Excel en format CSV simple
+                const excelContent = generateExcelContent(reportsData);
+
+                // Envoyer les rapports avec un email personnalisé selon le rôle
                 await sendEmail({
                     to: user.email,
                     subject: `📊 Rapports Hebdomadaires - ${new Date().toLocaleDateString('fr-FR')}`,
                     html: generateWeeklyReportEmail(user.name, reportsData),
                     attachments: [{
-                        filename: `rapports-hebdomadaires-${new Date().toISOString().split('T')[0]}.csv`,
+                        filename: `rapports-hebdomadaires-${user.role}-${new Date().toISOString().split('T')[0]}.csv`,
                         content: excelContent,
                         contentType: 'text/csv'
                     }]
