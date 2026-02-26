@@ -1,6 +1,7 @@
 import { db } from './db';
 import { sendEmail } from './email';
 import { generateProjectReport, generateTeamReport, generateTasksReport, generateActivityReport } from './reportGenerator';
+import { cleanupWeeklyActivities, archiveWeeklyActivities } from './activityCleanup';
 import * as XLSX from 'xlsx';
 
 // Générer les rapports spécifiques pour un manager
@@ -103,6 +104,17 @@ export async function generateWeeklyReports(): Promise<void> {
 
         console.log('✅ Rapports hebdomadaires générés et envoyés avec succès');
 
+        // Nettoyer les activités de la semaine précédente
+        const archiveActivities = process.env.ARCHIVE_WEEKLY_ACTIVITIES === 'true';
+
+        if (archiveActivities) {
+            console.log('📦 Archivage des activités...');
+            await archiveWeeklyActivities();
+        } else {
+            console.log('🧹 Suppression des activités...');
+            await cleanupWeeklyActivities();
+        }
+
     } catch (error) {
         console.error('❌ Erreur génération rapports hebdomadaires:', error);
     }
@@ -163,7 +175,7 @@ function extractDataFromReport(reportText: string, reportType: string): Array<{ 
 
     // Nettoyer complètement le texte des caractères spéciaux
     const cleanReportText = reportText
-        .replace(/[📊📋👥📈📝🔴🟡🟢⚠️📅⏰🏗️🎯📧©®™]/g, '')
+        .replace(/[📊📋👥📈📝🔴🟡🟢⚠️📅⏰🏗️🎯📧©®™🆕✏️🔄]/g, '')
         .replace(/[^\w\sàâäéèêëïîôöùûüÿçÀÂÄÉÈÊËÏÎÔÖÙÛÜŸÇ%;.,\-\(\)\d]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -175,23 +187,32 @@ function extractDataFromReport(reportText: string, reportType: string): Array<{ 
             completed: { pattern: /termin.*?(\d+)/i, type: 'Statistiques', metric: 'Terminés' },
             inProgress: { pattern: /en cours.*?(\d+)/i, type: 'Statistiques', metric: 'En cours' },
             overdue: { pattern: /en retard.*?(\d+)/i, type: 'Statistiques', metric: 'En retard' },
-            completionRate: { pattern: /taux.*?(\d+)%/i, type: 'Statistiques', metric: 'Taux de complétion (%)' }
+            completionRate: { pattern: /taux.*?(\d+)%/i, type: 'Statistiques', metric: 'Taux de complétion (%)' },
+            created: { pattern: /cré.*?(\d+)/i, type: 'Créations', metric: 'Projets créés' },
+            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Mises à jour', metric: 'Projets mis à jour' }
         },
         team: {
             total: { pattern: /total.*?(\d+)/i, type: 'Membres', metric: 'Total' },
             active: { pattern: /actif.*?(\d+)/i, type: 'Membres', metric: 'Actifs' },
-            inactive: { pattern: /inactif.*?(\d+)/i, type: 'Membres', metric: 'Inactifs' }
+            inactive: { pattern: /inactif.*?(\d+)/i, type: 'Membres', metric: 'Inactifs' },
+            created: { pattern: /cré.*?(\d+)/i, type: 'Créations', metric: 'Utilisateurs créés' },
+            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Mises à jour', metric: 'Utilisateurs mis à jour' }
         },
         tasks: {
             total: { pattern: /total.*?(\d+)/i, type: 'Statistiques', metric: 'Total' },
             completed: { pattern: /termin.*?(\d+)/i, type: 'Statistiques', metric: 'Terminées' },
             inProgress: { pattern: /en cours.*?(\d+)/i, type: 'Statistiques', metric: 'En cours' },
-            overdue: { pattern: /en retard.*?(\d+)/i, type: 'Statistiques', metric: 'En retard' }
+            overdue: { pattern: /en retard.*?(\d+)/i, type: 'Statistiques', metric: 'En retard' },
+            created: { pattern: /cré.*?(\d+)/i, type: 'Créations', metric: 'Tâches créées' },
+            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Mises à jour', metric: 'Tâches mises à jour' },
+            taskCompleted: { pattern: /termin.*?(\d+)/i, type: 'Actions', metric: 'Tâches terminées' }
         },
         activity: {
             total: { pattern: /total.*?(\d+)/i, type: 'Actions', metric: 'Total' },
-            created: { pattern: /cré.*?(\d+)/i, type: 'Actions', metric: 'Créations' },
-            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Actions', metric: 'Mises à jour' }
+            created: { pattern: /cré.*?(\d+)/i, type: 'Créations', metric: 'Éléments créés' },
+            updated: { pattern: /mis.*?jour.*?(\d+)/i, type: 'Mises à jour', metric: 'Éléments mis à jour' },
+            completed: { pattern: /termin.*?(\d+)/i, type: 'Actions', metric: 'Tâches terminées' },
+            userActivity: { pattern: /actions.*?(\d+)/i, type: 'Utilisateurs', metric: 'Actions par utilisateur' }
         }
     };
 

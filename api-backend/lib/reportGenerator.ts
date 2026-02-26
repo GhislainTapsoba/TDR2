@@ -273,49 +273,106 @@ export async function generateActivityReport(days: number = 7): Promise<string> 
         a.action,
         a.description,
         a.created_at,
+        a.entity_type,
+        a.entity_id,
         u.email as user_email,
+        u.name as user_name,
         u.role as user_role,
         CASE 
           WHEN a.action = 'task_created' THEN 'Tâche créée'
           WHEN a.action = 'task_updated' THEN 'Tâche mise à jour'
           WHEN a.action = 'task_completed' THEN 'Tâche terminée'
           WHEN a.action = 'project_created' THEN 'Projet créé'
+          WHEN a.action = 'project_updated' THEN 'Projet mis à jour'
           WHEN a.action = 'user_created' THEN 'Utilisateur créé'
+          WHEN a.action = 'user_updated' THEN 'Utilisateur mis à jour'
+          WHEN a.action = 'stage_created' THEN 'Étape créée'
+          WHEN a.action = 'stage_updated' THEN 'Étape mise à jour'
           ELSE a.action
         END as activity_label
       FROM activities a
       LEFT JOIN users u ON a.user_id = u.id
       WHERE a.created_at >= NOW() - INTERVAL '${days} days'
       ORDER BY a.created_at DESC
-      LIMIT 100
+      LIMIT 200
     `;
 
     const { rows } = await db.query(query);
 
-    let report = `📈 **RAPPORT D'ACTIVITÉ (${days} derniers jours)**\n\n`;
-    report += `Généré le: ${new Date().toLocaleDateString('fr-FR')}\n\n`;
+    let report = `📈 **RAPPORT D'ACTIVITÉ DÉTAILLÉ (${days} derniers jours)**\n\n`;
+    report += `Généré le: ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}\n\n`;
 
-    // Statistiques par type
+    // Statistiques globales
     const stats = rows.reduce((acc, activity) => {
       acc[activity.action] = (acc[activity.action] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    report += '📊 **Activités par type:**\n';
+    report += '📊 **Statistiques par type d\'action:**\n';
     for (const [type, count] of Object.entries(stats)) {
       const label = rows.find(r => r.action === type)?.activity_label || type;
       report += `• ${label}: ${count}\n`;
     }
     report += '\n';
 
-    // Activités récentes
-    report += '📝 **Activités récentes:**\n';
-    for (const activity of rows) {
-      const roleLabel = activity.user_role === 'admin' ? 'Admin' : activity.user_role === 'manager' ? 'Manager' : 'Membre';
-      report += `📅 ${new Date(activity.created_at).toLocaleDateString('fr-FR')} ${new Date(activity.created_at).toLocaleTimeString('fr-FR')}\n`;
-      report += `   👤 ${activity.user_email} (${roleLabel})\n`;
-      report += `   🏷️ ${activity.activity_label}\n`;
-      report += `   📝 ${activity.description}\n\n`;
+    // Statistiques par utilisateur
+    const userStats = rows.reduce((acc, activity) => {
+      const userKey = `${activity.user_email} (${activity.user_name || 'Sans nom'})`;
+      if (!acc[userKey]) {
+        acc[userKey] = { email: activity.user_email, name: activity.user_name, role: activity.user_role, actions: 0 };
+      }
+      acc[userKey].actions += 1;
+      return acc;
+    }, {} as Record<string, any>);
+
+    report += '👥 **Activités par utilisateur:**\n';
+    Object.values(userStats)
+      .sort((a, b) => b.actions - a.actions)
+      .forEach(user => {
+        const roleLabel = user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'Membre';
+        report += `• ${user.name || user.email} (${roleLabel}): ${user.actions} actions\n`;
+      });
+    report += '\n';
+
+    // Détails des créations
+    const creations = rows.filter(r => r.action.includes('_created'));
+    if (creations.length > 0) {
+      report += '🆕 **Créations récentes:**\n';
+      creations.slice(0, 50).forEach(activity => {
+        const roleLabel = activity.user_role === 'admin' ? 'Admin' : activity.user_role === 'manager' ? 'Manager' : 'Membre';
+        report += `📅 ${new Date(activity.created_at).toLocaleDateString('fr-FR')} ${new Date(activity.created_at).toLocaleTimeString('fr-FR')}\n`;
+        report += `   👤 ${activity.user_name || activity.user_email} (${roleLabel})\n`;
+        report += `   🏷️ ${activity.activity_label}\n`;
+        report += `   📝 ${activity.description}\n`;
+        report += `   🔗 Type: ${activity.entity_type} (ID: ${activity.entity_id})\n\n`;
+      });
+    }
+
+    // Détails des mises à jour
+    const updates = rows.filter(r => r.action.includes('_updated'));
+    if (updates.length > 0) {
+      report += '✏️ **Mises à jour récentes:**\n';
+      updates.slice(0, 30).forEach(activity => {
+        const roleLabel = activity.user_role === 'admin' ? 'Admin' : activity.user_role === 'manager' ? 'Manager' : 'Membre';
+        report += `📅 ${new Date(activity.created_at).toLocaleDateString('fr-FR')} ${new Date(activity.created_at).toLocaleTimeString('fr-FR')}\n`;
+        report += `   👤 ${activity.user_name || activity.user_email} (${roleLabel})\n`;
+        report += `   🏷️ ${activity.activity_label}\n`;
+        report += `   📝 ${activity.description}\n`;
+        report += `   🔗 Type: ${activity.entity_type} (ID: ${activity.entity_id})\n\n`;
+      });
+    }
+
+    // Toutes les autres activités
+    const others = rows.filter(r => !r.action.includes('_created') && !r.action.includes('_updated'));
+    if (others.length > 0) {
+      report += '🔄 **Autres activités:**\n';
+      others.slice(0, 20).forEach(activity => {
+        const roleLabel = activity.user_role === 'admin' ? 'Admin' : activity.user_role === 'manager' ? 'Manager' : 'Membre';
+        report += `📅 ${new Date(activity.created_at).toLocaleDateString('fr-FR')} ${new Date(activity.created_at).toLocaleTimeString('fr-FR')}\n`;
+        report += `   👤 ${activity.user_name || activity.user_email} (${roleLabel})\n`;
+        report += `   🏷️ ${activity.activity_label}\n`;
+        report += `   📝 ${activity.description}\n\n`;
+      });
     }
 
     return report;
