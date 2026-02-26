@@ -72,16 +72,6 @@ const sidebarItems: SidebarItem[] = [
     )
   },
   {
-    href: '/reports',
-    label: 'Rapports',
-    roles: ['admin', 'manager'], // Accessible à admin et manager
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v7m3-2h6" />
-      </svg>
-    )
-  },
-  {
     href: '/profile',
     label: 'Mon profil',
     icon: (
