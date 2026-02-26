@@ -34,11 +34,11 @@ export default function UsersPage() {
         if (user) {
             loadUsers();
         }
-    }, [user]);
+    }, [user, showInactive]);
 
     const loadUsers = async () => {
         try {
-            const response = await usersAPI.getAll();
+            const response = await usersAPI.getAll(showInactive);
             setUsers(response.data);
         } catch (error) {
             console.error('Error loading users:', error);
@@ -232,12 +232,19 @@ export default function UsersPage() {
                                                 >
                                                     Voir
                                                 </Link>
-                                                {userItem.is_active && (
+                                                {userItem.is_active ? (
                                                     <button
                                                         onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
                                                         className="text-orange-600 hover:text-orange-800"
                                                     >
                                                         Désactiver
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleToggleActive(userItem.id, userItem.is_active)}
+                                                        className="text-green-600 hover:text-green-800"
+                                                    >
+                                                        Réactiver
                                                     </button>
                                                 )}
                                                 <button

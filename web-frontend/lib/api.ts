@@ -54,7 +54,9 @@ export const authAPI = {
 
 // Users API
 export const usersAPI = {
-    getAll: () => api.get('/users'),
+    getAll: (includeInactive?: boolean) => api.get('/users', {
+        params: { include_inactive: includeInactive }
+    }),
     getById: (id: string) => api.get(`/users/${id}`),
     create: (data: any) => api.post('/users', data),
     update: (id: string, data: any) => api.put(`/users/${id}`, data),
