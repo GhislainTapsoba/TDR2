@@ -137,27 +137,69 @@ function generateExcelContent(reportsData: any): string {
 function extractReportData(reportText: string, reportType: string): string {
     const lines = reportText.split('\n');
     let csvLines = '';
-    let inDataSection = false;
+    let currentSection = '';
+    let dataPairs: { [key: string]: string } = {};
+
+    // Patterns d'extraction pour différents types de données
+    const patterns = {
+        projects: {
+            total: /total.*?(\d+)/i,
+            completed: /termin.*?(\d+)/i,
+            inProgress: /en cours.*?(\d+)/i,
+            overdue: /en retard.*?(\d+)/i,
+            completionRate: /taux.*?(\d+)%/i
+        },
+        team: {
+            total: /total.*?(\d+)/i,
+            active: /actif.*?(\d+)/i,
+            inactive: /inactif.*?(\d+)/i,
+            byRole: /(\w+).*?(\d+)/i
+        },
+        tasks: {
+            total: /total.*?(\d+)/i,
+            completed: /termin.*?(\d+)/i,
+            inProgress: /en cours.*?(\d+)/i,
+            overdue: /en retard.*?(\d+)/i,
+            byPriority: /(\w+).*?(\d+)/i
+        },
+        activity: {
+            total: /total.*?(\d+)/i,
+            byType: /(\w+).*?(\d+)/i
+        }
+    };
+
+    const currentPatterns = patterns[reportType.toLowerCase() as keyof typeof patterns] || {};
 
     for (const line of lines) {
-        if (line.includes('**') && line.includes(':')) {
-            inDataSection = true;
+        const cleanLine = line.replace(/[📊📋👥📈📝🔴🟡🟢⚠️📅⏰🏗️🎯📧]/g, '').trim();
+
+        if (!cleanLine) continue;
+
+        // Détecter le type de section
+        if (cleanLine.includes('PROJETS') || cleanLine.includes('ÉQUIPE') || cleanLine.includes('TÂCHES') || cleanLine.includes('ACTIVITÉ')) {
+            currentSection = cleanLine.toLowerCase();
             continue;
         }
 
-        if (inDataSection && line.trim()) {
-            // Nettoyer la ligne pour le CSV
-            const cleanLine = line.replace(/[📊📋👥📈📝🔴🟡🟢⚠️📅⏰]/g, '').trim();
-
-            if (cleanLine && !cleanLine.startsWith('•') && !cleanLine.startsWith('-')) {
-                // Extraire la clé et la valeur
-                const colonIndex = cleanLine.indexOf(':');
-                if (colonIndex > 0) {
-                    const key = cleanLine.substring(0, colonIndex).trim();
-                    const value = cleanLine.substring(colonIndex + 1).trim();
-                    csvLines += `${reportType},${key},"${value}"\n`;
+        // Extraire les données avec les patterns
+        if (currentPatterns) {
+            for (const [key, pattern] of Object.entries(currentPatterns)) {
+                const match = cleanLine.match(pattern);
+                if (match) {
+                    dataPairs[key] = match[1];
                 }
             }
+        }
+    }
+
+    // Générer le CSV avec les données extraites
+    csvLines += `${reportType};Clé;Valeur\n`;
+
+    for (const [key, value] of Object.entries(dataPairs)) {
+        if (value) {
+            // Échapper les guillemets dans la valeur
+            const escapedValue = value.replace(/"/g, '""');
+            csvLines += `${reportType};"${key}";"${escapedValue}"\n`;
         }
     }
 
