@@ -2,7 +2,6 @@ import { db } from './db';
 import { sendEmail } from './email';
 import { generateProjectReport, generateTeamReport, generateTasksReport, generateActivityReport } from './reportGenerator';
 import { cleanupWeeklyActivities, archiveWeeklyActivities } from './activityCleanup';
-import * as XLSX from 'xlsx';
 
 // Générer les rapports spécifiques pour un manager
 async function generateManagerReports(managerId: string) {
